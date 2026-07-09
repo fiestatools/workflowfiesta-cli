@@ -30,25 +30,31 @@ jobs:
 
       - name: Create Release Pull Request
         id: changesets
-        uses: changesets/action@a45c4d594aa4e2c509dc14a9f2b3b67ba3780d0d # v1.9.0
+        uses: changesets/action@v1
         with:
-          version-script: bun changeset version
-          pr-title: "chore: release CLI"
-          commit-message: "chore: release CLI"
-          create-github-releases: true
+          version: bun changeset version
+          title: "chore: release CLI"
+          commit: "chore: release CLI"
+          createGithubReleases: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Build CLI binaries
-        if: steps.changesets.outputs.published == 'true'
+        if: steps.changesets.outputs.hasChangesets == 'false'
         run: bun run build
 
       - name: Upload release assets
-        if: steps.changesets.outputs.published == 'true'
+        if: steps.changesets.outputs.hasChangesets == 'false'
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           VERSION=$(node -p "require('./package.json').version")
+
+          # Check if release exists (created by changesets action)
+          if ! gh release view "v${VERSION}" &>/dev/null; then
+            echo "No release found for v${VERSION}, skipping asset upload"
+            exit 0
+          fi
 
           # Create tarballs for direct download
           cd dist
@@ -63,7 +69,7 @@ jobs:
           gh release upload "v${VERSION}" dist/cli-*-v${VERSION}.tar.gz --clobber
 
       - name: Summary
-        if: steps.changesets.outputs.published == 'true'
+        if: steps.changesets.outputs.hasChangesets == 'false'
         run: |
           VERSION=$(node -p "require('./package.json').version")
           echo "## CLI Release Summary" >> $GITHUB_STEP_SUMMARY
