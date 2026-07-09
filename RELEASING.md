@@ -145,7 +145,7 @@ The changesets configuration is in `.changeset/config.json`:
 
 ```json
 {
-  "changelog": ["@changesets/changelog-github", { "repo": "workflowfiesta/workflowfiesta-cli" }],
+  "changelog": ["@changesets/changelog-github", { "repo": "fiestatools/workflowfiesta-cli" }],
   "access": "restricted",
   "baseBranch": "main"
 }
