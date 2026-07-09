@@ -35,7 +35,6 @@ jobs:
           version: bun changeset version
           title: "chore: release CLI"
           commit: "chore: release CLI"
-          createGithubReleases: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
@@ -43,18 +42,12 @@ jobs:
         if: steps.changesets.outputs.hasChangesets == 'false'
         run: bun run build
 
-      - name: Upload release assets
+      - name: Create GitHub Release and upload assets
         if: steps.changesets.outputs.hasChangesets == 'false'
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           VERSION=$(node -p "require('./package.json').version")
-
-          # Check if release exists (created by changesets action)
-          if ! gh release view "v${VERSION}" &>/dev/null; then
-            echo "No release found for v${VERSION}, skipping asset upload"
-            exit 0
-          fi
 
           # Create tarballs for direct download
           cd dist
@@ -64,9 +57,17 @@ jobs:
           done
           cd ..
 
-          # Upload assets to the release created by changesets
-          echo "Uploading assets to release v${VERSION}..."
-          gh release upload "v${VERSION}" dist/cli-*-v${VERSION}.tar.gz --clobber
+          # Create GitHub release with assets
+          if gh release view "v${VERSION}" &>/dev/null; then
+            echo "Release v${VERSION} exists, uploading assets..."
+            gh release upload "v${VERSION}" dist/cli-*-v${VERSION}.tar.gz --clobber
+          else
+            echo "Creating release v${VERSION}..."
+            gh release create "v${VERSION}" \
+              --title "v${VERSION}" \
+              --generate-notes \
+              dist/cli-*-v${VERSION}.tar.gz
+          fi
 
       - name: Summary
         if: steps.changesets.outputs.hasChangesets == 'false'
