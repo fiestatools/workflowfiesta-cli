@@ -1,0 +1,95 @@
+name: Release CLI
+
+on:
+  push:
+    branches:
+      - main
+
+concurrency: ${{ github.workflow }}-${{ github.ref }}
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  release:
+    name: Release
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@735343b667d3e6f658f44d0eca948eb6282f2b76 # v2
+        with:
+          bun-version: latest
+
+      - name: Install dependencies
+        run: bun install
+
+      - name: Check for changesets
+        id: check
+        run: |
+          # Check if there are any changeset files (excluding README and config)
+          CHANGESETS=$(find .changeset -name "*.md" ! -name "README.md" 2>/dev/null | wc -l)
+          if [ "$CHANGESETS" -gt 0 ]; then
+            echo "hasChangesets=true" >> $GITHUB_OUTPUT
+            echo "Found $CHANGESETS changeset(s)"
+          else
+            echo "hasChangesets=false" >> $GITHUB_OUTPUT
+            echo "No changesets found"
+          fi
+
+      - name: Create Release Pull Request
+        if: steps.check.outputs.hasChangesets == 'true'
+        uses: changesets/action@v1
+        with:
+          version: bun changeset version
+          title: "chore: release CLI"
+          commit: "chore: release CLI"
+        env:
+          GITHUB_TOKEN: ${{ secrets.GH_CI_TOKEN }}
+
+      - name: Build CLI binaries
+        if: steps.check.outputs.hasChangesets == 'false'
+        run: bun run build
+
+      - name: Create GitHub Release and upload assets
+        if: steps.check.outputs.hasChangesets == 'false'
+        env:
+          GH_TOKEN: ${{ secrets.GH_CI_TOKEN }}
+        run: |
+          VERSION=$(node -p "require('./package.json').version")
+
+          # Check if this version is already released
+          if gh release view "v${VERSION}" &>/dev/null; then
+            echo "Release v${VERSION} already exists, skipping"
+            exit 0
+          fi
+
+          # Create tarballs for direct download
+          cd dist
+          for dir in cli-*/; do
+            name="${dir%/}"
+            tar -czf "${name}-v${VERSION}.tar.gz" "$name"
+          done
+          cd ..
+
+          # Create GitHub release
+          echo "Creating release v${VERSION}..."
+          gh release create "v${VERSION}" \
+            --title "v${VERSION}" \
+            --generate-notes \
+            dist/cli-*-v${VERSION}.tar.gz
+
+      - name: Summary
+        if: steps.check.outputs.hasChangesets == 'false'
+        run: |
+          VERSION=$(node -p "require('./package.json').version")
+          echo "## CLI Release Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Item | Value |" >> $GITHUB_STEP_SUMMARY
+          echo "|------|-------|" >> $GITHUB_STEP_SUMMARY
+          echo "| Version | ${VERSION} |" >> $GITHUB_STEP_SUMMARY
+          echo "| GitHub Release | v${VERSION} |" >> $GITHUB_STEP_SUMMARY

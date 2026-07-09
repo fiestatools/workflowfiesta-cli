@@ -1,0 +1,57 @@
+{
+  "name": "@workflowfiesta/cli",
+  "type": "module",
+  "version": "0.0.1",
+  "private": true,
+  "description": "WorkflowFiesta CLI - Terminal interface for WorkflowFiesta AI agents",
+  "license": "SEE LICENSE IN LICENSE",
+  "keywords": [
+    "workflowfiesta",
+    "cli",
+    "ai",
+    "agents",
+    "workflow",
+    "automation"
+  ],
+  "module": "src/index.tsx",
+  "bin": {
+    "wf": "./bin/wf.cjs",
+    "workflowfiesta": "./bin/wf.cjs"
+  },
+  "files": [
+    "bin"
+  ],
+  "scripts": {
+    "dev": "bun run --watch src/index.tsx",
+    "build": "bun run scripts/build.ts",
+    "publish": "bun run scripts/publish.ts",
+    "release:publish": "bun run build && bun run publish",
+    "start": "bun run src/index.tsx",
+    "check-types": "tsc --noEmit",
+    "changeset": "changeset",
+    "lint": "eslint .",
+    "lint:fix": "eslint . --fix",
+    "test": "bun test"
+  },
+  "peerDependencies": {
+    "typescript": "^5"
+  },
+  "dependencies": {
+    "@opentui/core": "^0.4.3",
+    "@opentui/react": "^0.4.3",
+    "commander": "^15.0.0",
+    "open": "^11.0.0",
+    "react": "^19.2.6"
+  },
+  "devDependencies": {
+    "@antfu/eslint-config": "^9.1.0",
+    "@changesets/changelog-github": "^0.7.0",
+    "@changesets/cli": "^2",
+    "@eslint-react/eslint-plugin": "^5.13.1",
+    "@types/bun": "latest",
+    "@types/node": "^22.0.0",
+    "@types/react": "^19.2.17",
+    "eslint": "^10.6.0",
+    "eslint-plugin-react-refresh": "^0.5.3"
+  }
+}
