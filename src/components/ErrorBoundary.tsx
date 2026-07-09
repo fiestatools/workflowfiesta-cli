@@ -32,14 +32,14 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
     return { hasError: true, error };
   }
 
-  componentDidCatch(error: Error, info: ErrorInfo) {
+  override componentDidCatch(error: Error, info: ErrorInfo) {
     this.setState({ componentStack: info.componentStack ?? '' });
     this.props.onError?.(error, {
       componentStack: info.componentStack ?? '',
     });
   }
 
-  render() {
+  override render() {
     const { hasError, error, componentStack } = this.state;
     const { children, fallback, title = 'Error' } = this.props;
 
