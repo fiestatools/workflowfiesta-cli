@@ -37,6 +37,7 @@ jobs:
           pr-title: "chore: release CLI"
           commit-message: "chore: release CLI"
           create-github-releases: true
+          commit-mode: github-api
 
       - name: Build CLI binaries
         if: steps.changesets.outputs.hasChangesets == 'false'
