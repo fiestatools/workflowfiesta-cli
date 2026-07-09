@@ -28,34 +28,26 @@ jobs:
       - name: Install dependencies
         run: bun install
 
-      - name: Create Release Pull Request or Release
+      - name: Create Release Pull Request
         id: changesets
         uses: changesets/action@v2.0.0-next.3
         with:
           github-token: ${{ secrets.GH_CI_TOKEN }}
           version-script: bun changeset version
-          publish-script: echo "Published"
           pr-title: "chore: release CLI"
           commit-message: "chore: release CLI"
-          create-github-releases: true
           commit-mode: github-api
 
       - name: Build CLI binaries
-        if: steps.changesets.outputs.published == 'true'
+        if: steps.changesets.outputs.hasChangesets == 'false'
         run: bun run build
 
-      - name: Upload release assets
-        if: steps.changesets.outputs.published == 'true'
+      - name: Create GitHub Release and upload assets
+        if: steps.changesets.outputs.hasChangesets == 'false'
         env:
           GH_TOKEN: ${{ secrets.GH_CI_TOKEN }}
         run: |
           VERSION=$(node -p "require('./package.json').version")
-
-          # Check if release exists (created by changesets action)
-          if ! gh release view "v${VERSION}" &>/dev/null; then
-            echo "No release found for v${VERSION}, skipping asset upload"
-            exit 0
-          fi
 
           # Create tarballs for direct download
           cd dist
@@ -65,12 +57,20 @@ jobs:
           done
           cd ..
 
-          # Upload assets to the release created by changesets
-          echo "Uploading assets to release v${VERSION}..."
-          gh release upload "v${VERSION}" dist/cli-*-v${VERSION}.tar.gz --clobber
+          # Create or update GitHub release
+          if gh release view "v${VERSION}" &>/dev/null; then
+            echo "Release v${VERSION} exists, uploading assets..."
+            gh release upload "v${VERSION}" dist/cli-*-v${VERSION}.tar.gz --clobber
+          else
+            echo "Creating release v${VERSION}..."
+            gh release create "v${VERSION}" \
+              --title "v${VERSION}" \
+              --generate-notes \
+              dist/cli-*-v${VERSION}.tar.gz
+          fi
 
       - name: Summary
-        if: steps.changesets.outputs.published == 'true'
+        if: steps.changesets.outputs.hasChangesets == 'false'
         run: |
           VERSION=$(node -p "require('./package.json').version")
           echo "## CLI Release Summary" >> $GITHUB_STEP_SUMMARY
