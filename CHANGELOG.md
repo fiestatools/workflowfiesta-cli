@@ -1,5 +1,11 @@
 # @workflowfiesta/cli
 
+## 0.0.4
+
+### Patch Changes
+
+- [#16](https://github.com/fiestatools/workflowfiesta-cli/pull/16) [`d6531d3`](https://github.com/fiestatools/workflowfiesta-cli/commit/d6531d30ec5c76be6e8a5b84bb0c87c1138177d5) Thanks [@awaitimport](https://github.com/awaitimport)! - Fix release workflow to create GitHub releases with binary assets
+
 ## 0.0.3
 
 ### Patch Changes
