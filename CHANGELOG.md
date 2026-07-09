@@ -1,5 +1,11 @@
 # @workflowfiesta/cli
 
+## 0.0.6
+
+### Patch Changes
+
+- [#20](https://github.com/fiestatools/workflowfiesta-cli/pull/20) [`d052ba1`](https://github.com/fiestatools/workflowfiesta-cli/commit/d052ba13a06669b245a01d607cc699bfc661ec82) Thanks [@awaitimport](https://github.com/awaitimport)! - Fix release workflow to use hasChangesets flag and create GitHub releases manually
+
 ## 0.0.5
 
 ### Patch Changes
