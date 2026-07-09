@@ -25,32 +25,25 @@ jobs:
         with:
           bun-version: latest
 
-      - name: Setup Node.js
-        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
-        with:
-          node-version: "22"
-          registry-url: "https://registry.npmjs.org"
-
       - name: Install dependencies
         run: bun install
 
-      - name: Create Release Pull Request or Publish
+      - name: Create Release Pull Request
         id: changesets
-        uses: changesets/action@c6cc0d84cb4ac09aec4363a5ee1bab5a969637b6 # v1
+        uses: changesets/action@a45c4d594aa4e2c509dc14a9f2b3b67ba3780d0d # v1.9.0
         with:
-          version: bun changeset version
-          publish: bun run release:publish
-          title: "chore: release CLI"
-          commit: "chore: release CLI"
+          version-script: bun changeset version
+          pr-title: "chore: release CLI"
+          commit-message: "chore: release CLI"
+          create-github-releases: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
       - name: Build CLI binaries
         if: steps.changesets.outputs.published == 'true'
         run: bun run build
 
-      - name: Create GitHub Release with assets
+      - name: Upload release assets
         if: steps.changesets.outputs.published == 'true'
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -65,43 +58,9 @@ jobs:
           done
           cd ..
 
-          # Check if release already exists, if so upload assets to it
-          if gh release view "v${VERSION}" &>/dev/null; then
-            echo "Release v${VERSION} exists, uploading assets..."
-            gh release upload "v${VERSION}" dist/cli-*-v${VERSION}.tar.gz --clobber
-          else
-            echo "Creating release v${VERSION}..."
-            gh release create "v${VERSION}" \
-              --title "v${VERSION}" \
-              --notes "## WorkflowFiesta CLI v${VERSION}
-
-          ### Installation
-
-          **Via npm (recommended):**
-          \`\`\`bash
-          npm install -g @workflowfiesta/cli@${VERSION}
-          \`\`\`
-
-          **Via direct download:**
-          Download the appropriate binary for your platform from the assets below.
-
-          | Platform | Architecture | File |
-          |----------|--------------|------|
-          | macOS | Apple Silicon (M1/M2/M3) | cli-darwin-arm64 |
-          | macOS | Intel | cli-darwin-x64 |
-          | Linux | ARM64 | cli-linux-arm64 |
-          | Linux | x64 | cli-linux-x64 |
-          | Windows | ARM64 | cli-windows-arm64 |
-          | Windows | x64 | cli-windows-x64 |
-
-          ### Usage
-          \`\`\`bash
-          wf --help
-          wf chat
-          wf auth login --token <your-token>
-          \`\`\`" \
-              dist/cli-*-v${VERSION}.tar.gz
-          fi
+          # Upload assets to the release created by changesets
+          echo "Uploading assets to release v${VERSION}..."
+          gh release upload "v${VERSION}" dist/cli-*-v${VERSION}.tar.gz --clobber
 
       - name: Summary
         if: steps.changesets.outputs.published == 'true'
@@ -112,5 +71,4 @@ jobs:
           echo "| Item | Value |" >> $GITHUB_STEP_SUMMARY
           echo "|------|-------|" >> $GITHUB_STEP_SUMMARY
           echo "| Version | ${VERSION} |" >> $GITHUB_STEP_SUMMARY
-          echo "| npm Package | @workflowfiesta/cli |" >> $GITHUB_STEP_SUMMARY
-          echo "| Published | ${{ steps.changesets.outputs.published }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| GitHub Release | v${VERSION} |" >> $GITHUB_STEP_SUMMARY
