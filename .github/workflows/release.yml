@@ -43,13 +43,13 @@ jobs:
 
       - name: Create Release Pull Request
         if: steps.check.outputs.hasChangesets == 'true'
-        uses: changesets/action@v2.0.0-next.3
+        uses: changesets/action@v1
         with:
-          github-token: ${{ secrets.GH_CI_TOKEN }}
-          version-script: bun changeset version
-          pr-title: "chore: release CLI"
-          commit-message: "chore: release CLI"
-          commit-mode: github-api
+          version: bun changeset version
+          title: "chore: release CLI"
+          commit: "chore: release CLI"
+        env:
+          GITHUB_TOKEN: ${{ secrets.GH_CI_TOKEN }}
 
       - name: Build CLI binaries
         if: steps.check.outputs.hasChangesets == 'false'
