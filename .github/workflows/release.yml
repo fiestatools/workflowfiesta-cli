@@ -32,12 +32,11 @@ jobs:
         id: changesets
         uses: changesets/action@v2.0.0-next.3
         with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
           version-script: bun changeset version
           pr-title: "chore: release CLI"
           commit-message: "chore: release CLI"
           create-github-releases: true
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Build CLI binaries
         if: steps.changesets.outputs.hasChangesets == 'false'
