@@ -1,19 +1,19 @@
 import type { ChatState } from '../chat'
 import { TextAttributes } from '@opentui/core'
 import { BRAND_ORANGE, SUBTLE_BG, themeColors } from '../theme'
+import { truncateText } from '../utils/truncateText'
+import { Divider } from './Divider'
 
 /** Width of the side panel in characters. */
 export const SIDE_PANEL_WIDTH = 32
+
+/** CLI version - uses build-time constant or falls back to dev */
+const CLI_VERSION = typeof WF_VERSION !== 'undefined' ? `v${WF_VERSION}` : 'dev'
 
 /** Props for the SidePanel component. */
 export interface SidePanelProps {
   state: ChatState
   isVisible: boolean
-}
-
-/** Divider component. */
-function Divider() {
-  return <text fg={themeColors.textSubtle}>{'─'.repeat(SIDE_PANEL_WIDTH - 4)}</text>
 }
 
 /** Side panel component showing session/context info. */
@@ -87,16 +87,8 @@ export function SidePanel({ state, isVisible }: SidePanelProps) {
       <Divider />
       <text attributes={TextAttributes.DIM}>^S settings  ^N new</text>
       <text attributes={TextAttributes.DIM}>^B panel     ^C quit</text>
+      <Divider />
+      <text fg={themeColors.textSubtle}>{CLI_VERSION}</text>
     </box>
   )
-}
-
-/** Truncate text with ellipsis if too long. */
-function truncateText(text: string, maxLength: number): string {
-  // Remove newlines and extra whitespace
-  const cleaned = text.replace(/\s+/g, ' ').trim()
-  if (cleaned.length <= maxLength) {
-    return cleaned
-  }
-  return `${cleaned.slice(0, maxLength - 1)}…`
 }

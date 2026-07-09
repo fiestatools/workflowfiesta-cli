@@ -23,6 +23,8 @@ export type { ChatViewProps } from './ChatView'
 export { CommandPalette } from './CommandPalette'
 export type { CommandPaletteProps } from './CommandPalette'
 export { CredentialRequestForm } from './CredentialRequestForm'
+export { Divider } from './Divider'
+export type { DividerProps } from './Divider'
 export { ErrorBoundary } from './ErrorBoundary'
 export type { ErrorBoundaryProps } from './ErrorBoundary'
 // Layout components

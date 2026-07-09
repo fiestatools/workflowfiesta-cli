@@ -2,6 +2,10 @@
  * Type declarations for the CLI.
  */
 
+// Build-time constants
+declare const WF_VERSION: string
+declare const WF_CLI_NAME: string
+
 // React JSX intrinsic elements for OpenTUI
 declare namespace JSX {
   interface IntrinsicElements {
