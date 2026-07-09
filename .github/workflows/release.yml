@@ -30,118 +30,56 @@ permissions:
   contents: write
 
 jobs:
-  build:
-    strategy:
-      matrix:
-        include:
-          # macOS builds (ARM64 native, x64 cross-compiled)
-          - os: macos-latest
-            targets: "darwin-arm64 darwin-x64 darwin-x64-baseline"
-          # Linux builds (x64 native, ARM64 cross-compiled)
-          - os: ubuntu-latest
-            targets: "linux-arm64 linux-x64 linux-x64-baseline linux-arm64-musl linux-x64-musl linux-x64-baseline-musl"
-          # Windows builds
-          - os: windows-latest
-            targets: "windows-arm64 windows-x64 windows-x64-baseline"
-
-    runs-on: ${{ matrix.os }}
+  release:
+    runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4
 
       - uses: oven-sh/setup-bun@735343b667d3e6f658f44d0eca948eb6282f2b76 # v2
         with:
           bun-version: latest
+
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: "22"
+          registry-url: "https://registry.npmjs.org"
 
       - name: Install dependencies
         run: bun install
 
       - name: Bump version
-        id: bump_version
-        shell: bash
+        id: version
         run: |
-          # Get current version
           CURRENT=$(node -p "require('./package.json').version")
-          echo "current_version=$CURRENT" >> $GITHUB_OUTPUT
-
-          # Bump version using npm (works with bun's package.json)
           npm version ${{ github.event.inputs.version_bump }} --no-git-tag-version
-
           NEW=$(node -p "require('./package.json').version")
           echo "version=$NEW" >> $GITHUB_OUTPUT
           echo "Bumped version: $CURRENT -> $NEW"
 
       - name: Build CLI binaries
-        run: bun run build --skip-install
-        env:
-          # Ensure all platform binaries are built
-          BUILD_TARGETS: ${{ matrix.targets }}
+        run: bun run build
 
       - name: List built artifacts
-        shell: bash
         run: ls -la dist/
 
-      - name: Upload build artifacts
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
-        with:
-          name: cli-${{ matrix.os }}
-          path: dist/
-          retention-days: 7
-
-  publish:
-    needs: build
-    runs-on: ubuntu-latest
-    if: ${{ github.event.inputs.dry_run == 'false' }}
-
-    steps:
-      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
-
-      - uses: oven-sh/setup-bun@735343b667d3e6f658f44d0eca948eb6282f2b76 # v2
-        with:
-          bun-version: latest
-
-      - uses: actions/setup-node@53b83947a5a98c8d113130e565377fae1a50d02f # v6.3.0
-        with:
-          node-version: "22"
-          registry-url: "https://registry.npmjs.org"
-
-      - name: Download all artifacts
-        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
-        with:
-          path: dist-artifacts
-          pattern: cli-*
-          merge-multiple: true
-
-      - name: Prepare dist directory
-        run: |
-          mkdir -p dist
-          cp -r dist-artifacts/* dist/
-          ls -la dist/
-
-      - name: Bump version (same as build)
-        run: npm version ${{ github.event.inputs.version_bump }} --no-git-tag-version
-
-      - name: Get version
-        id: version
-        run: echo "version=$(node -p "require('./package.json').version")" >> $GITHUB_OUTPUT
-
-      - name: Install dependencies
-        run: bun install
-
       - name: Publish to npm
+        if: ${{ github.event.inputs.dry_run == 'false' }}
         run: bun run publish ${{ github.event.inputs.channel == 'latest' && '--latest' || '' }}
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
       - name: Commit version bump
+        if: ${{ github.event.inputs.dry_run == 'false' }}
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add package.json
-          git commit -m "chore(cli): bump version to ${{ steps.version.outputs.version }}"
+          git add package.json bun.lock
+          git commit -m "chore: release v${{ steps.version.outputs.version }}"
           git push
 
       - name: Create GitHub Release
+        if: ${{ github.event.inputs.dry_run == 'false' }}
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
@@ -156,8 +94,8 @@ jobs:
           done
           cd ..
 
-          gh release create "cli-v${VERSION}" \
-            --title "CLI v${VERSION}" \
+          gh release create "v${VERSION}" \
+            --title "v${VERSION}" \
             --notes "## WorkflowFiesta CLI v${VERSION}
 
           ### Installation
@@ -176,8 +114,6 @@ jobs:
           | macOS | Intel | cli-darwin-x64 |
           | Linux | ARM64 | cli-linux-arm64 |
           | Linux | x64 | cli-linux-x64 |
-          | Linux (Alpine/musl) | ARM64 | cli-linux-arm64-musl |
-          | Linux (Alpine/musl) | x64 | cli-linux-x64-musl |
           | Windows | ARM64 | cli-windows-arm64 |
           | Windows | x64 | cli-windows-x64 |
 
