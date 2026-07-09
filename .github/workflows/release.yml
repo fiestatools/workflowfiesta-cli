@@ -1,46 +1,32 @@
 name: Release CLI
 
 on:
-  workflow_dispatch:
-    inputs:
-      version_bump:
-        description: "Version bump type"
-        required: true
-        default: "patch"
-        type: choice
-        options:
-          - patch
-          - minor
-          - major
-      channel:
-        description: "Release channel"
-        required: true
-        default: "beta"
-        type: choice
-        options:
-          - beta
-          - latest
-      dry_run:
-        description: "Dry run (build only, no publish)"
-        required: false
-        default: false
-        type: boolean
+  push:
+    branches:
+      - main
+
+concurrency: ${{ github.workflow }}-${{ github.ref }}
 
 permissions:
   contents: write
+  pull-requests: write
 
 jobs:
   release:
+    name: Release
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4
+      - name: Checkout
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4
 
-      - uses: oven-sh/setup-bun@735343b667d3e6f658f44d0eca948eb6282f2b76 # v2
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@735343b667d3e6f658f44d0eca948eb6282f2b76 # v2
         with:
           bun-version: latest
 
-      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+      - name: Setup Node.js
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
           node-version: "22"
           registry-url: "https://registry.npmjs.org"
@@ -48,43 +34,28 @@ jobs:
       - name: Install dependencies
         run: bun install
 
-      - name: Bump version
-        id: version
-        run: |
-          CURRENT=$(node -p "require('./package.json').version")
-          npm version ${{ github.event.inputs.version_bump }} --no-git-tag-version
-          NEW=$(node -p "require('./package.json').version")
-          echo "version=$NEW" >> $GITHUB_OUTPUT
-          echo "Bumped version: $CURRENT -> $NEW"
-
-      - name: Build CLI binaries
-        run: bun run build
-
-      - name: List built artifacts
-        run: ls -la dist/
-
-      - name: Publish to npm
-        if: ${{ github.event.inputs.dry_run == 'false' }}
-        run: bun run publish ${{ github.event.inputs.channel == 'latest' && '--latest' || '' }}
+      - name: Create Release Pull Request or Publish
+        id: changesets
+        uses: changesets/action@c8bada60c408975afd1a20b3db81d6eee6c5f621 # v1
+        with:
+          version: bun changeset version
+          publish: bun run release:publish
+          title: "chore: release CLI"
+          commit: "chore: release CLI"
         env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
-      - name: Commit version bump
-        if: ${{ github.event.inputs.dry_run == 'false' }}
-        run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add package.json bun.lock
-          git commit -m "chore: release v${{ steps.version.outputs.version }}"
-          git push
+      - name: Build CLI binaries
+        if: steps.changesets.outputs.published == 'true'
+        run: bun run build
 
-      - name: Create GitHub Release
-        if: ${{ github.event.inputs.dry_run == 'false' }}
+      - name: Create GitHub Release with assets
+        if: steps.changesets.outputs.published == 'true'
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          VERSION="${{ steps.version.outputs.version }}"
-          CHANNEL="${{ github.event.inputs.channel }}"
+          VERSION=$(node -p "require('./package.json').version")
 
           # Create tarballs for direct download
           cd dist
@@ -94,9 +65,15 @@ jobs:
           done
           cd ..
 
-          gh release create "v${VERSION}" \
-            --title "v${VERSION}" \
-            --notes "## WorkflowFiesta CLI v${VERSION}
+          # Check if release already exists, if so upload assets to it
+          if gh release view "v${VERSION}" &>/dev/null; then
+            echo "Release v${VERSION} exists, uploading assets..."
+            gh release upload "v${VERSION}" dist/cli-*-v${VERSION}.tar.gz --clobber
+          else
+            echo "Creating release v${VERSION}..."
+            gh release create "v${VERSION}" \
+              --title "v${VERSION}" \
+              --notes "## WorkflowFiesta CLI v${VERSION}
 
           ### Installation
 
@@ -122,19 +99,18 @@ jobs:
           wf --help
           wf chat
           wf auth login --token <your-token>
-          \`\`\`
-
-          ### Release Channel
-          This release is tagged as \`${CHANNEL}\`." \
-            dist/cli-*-v${VERSION}.tar.gz
+          \`\`\`" \
+              dist/cli-*-v${VERSION}.tar.gz
+          fi
 
       - name: Summary
+        if: steps.changesets.outputs.published == 'true'
         run: |
+          VERSION=$(node -p "require('./package.json').version")
           echo "## CLI Release Summary" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "| Item | Value |" >> $GITHUB_STEP_SUMMARY
           echo "|------|-------|" >> $GITHUB_STEP_SUMMARY
-          echo "| Version | ${{ steps.version.outputs.version }} |" >> $GITHUB_STEP_SUMMARY
-          echo "| Channel | ${{ github.event.inputs.channel }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Version | ${VERSION} |" >> $GITHUB_STEP_SUMMARY
           echo "| npm Package | @workflowfiesta/cli |" >> $GITHUB_STEP_SUMMARY
-          echo "| Dry Run | ${{ github.event.inputs.dry_run }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Published | ${{ steps.changesets.outputs.published }} |" >> $GITHUB_STEP_SUMMARY
