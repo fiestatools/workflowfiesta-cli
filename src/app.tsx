@@ -2,7 +2,7 @@ import { createCliRenderer } from '@opentui/core';
 import { createRoot } from '@opentui/react';
 import { useState, useEffect } from 'react';
 import type { Services } from './services';
-import { LoadingScreen, ChatInterface, AuthGate } from './components';
+import { LoadingScreen, ChatInterface, AuthGate, ErrorBoundary } from './components';
 
 type AppView = 'loading' | 'auth' | 'chat';
 
@@ -43,5 +43,9 @@ export function App({ services }: { services: Services | null }) {
 export async function startApp(services: Services): Promise<void> {
   const renderer = await createCliRenderer();
   const root = createRoot(renderer);
-  root.render(<App services={services} />);
+  root.render(
+    <ErrorBoundary title="Application Error">
+      <App services={services} />
+    </ErrorBoundary>
+  );
 }

@@ -50,6 +50,8 @@ export { AccessTokenRevealOverlay } from './AccessTokenRevealOverlay';
 export type { AccessTokenRevealOverlayProps } from './AccessTokenRevealOverlay';
 export { MaskedInput } from './MaskedInput';
 export type { MaskedInputProps } from './MaskedInput';
+export { PasswordInput } from './PasswordInput';
+export type { PasswordInputProps } from './PasswordInput';
 
 // Overlays
 export { AgentPicker } from './AgentPicker';
@@ -60,10 +62,12 @@ export { HistoryView } from './HistoryView';
 export type { HistoryViewProps } from './HistoryView';
 
 // Hooks
-export { useChatState, useInput } from './hooks';
+export { useChatState, useInput } from '../hooks';
 
 // App-level components
 export { LoadingScreen } from './LoadingScreen';
 export type { LoadingScreenProps } from './LoadingScreen';
 export { ChatInterface } from './ChatInterface';
 export type { ChatInterfaceProps } from './ChatInterface';
+export { ErrorBoundary } from './ErrorBoundary';
+export type { ErrorBoundaryProps } from './ErrorBoundary';
