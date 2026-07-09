@@ -4,6 +4,7 @@ import type { InputProps } from '@opentui/react';
 import { useState, useCallback } from 'react';
 import { BRAND_ORANGE, themeColors } from '../theme';
 import type { AuthService } from '../auth';
+import { PasswordInput } from './PasswordInput';
 
 export interface AuthLoginProps {
   authService: AuthService;
@@ -87,20 +88,14 @@ export function AuthLoginDialog({ authService, onSuccess, onCancel }: AuthLoginP
 
         <box marginTop={1} flexDirection="column" gap={1}>
           <text>Access Token:</text>
-          <box
-            borderStyle="single"
-            borderColor={error ? themeColors.error : (activeField === 'token' ? BRAND_ORANGE : undefined)}
-            paddingX={1}
-          >
-            <input
-              value={token}
-              onInput={setToken}
-              onSubmit={handleSubmit as InputProps['onSubmit']}
-              placeholder="wf_xxxx..."
-              flexGrow={1}
-              focused={activeField === 'token'}
-            />
-          </box>
+          <PasswordInput
+            value={token}
+            onChange={setToken}
+            onSubmit={handleSubmit}
+            placeholder="wf_xxxx..."
+            focused={activeField === 'token'}
+            showToggle={true}
+          />
         </box>
 
         <box flexDirection="column" gap={1}>

@@ -4,6 +4,10 @@ import { useState, useEffect, useCallback } from 'react';
 import { themeColors, SUBTLE_BG, BRAND_ORANGE } from '../theme';
 import { getConfigManager, type CliConfig } from '../config';
 import type { AuthService } from '../auth';
+import { openUrl } from '../utils/openUrl';
+
+/** Documentation URL */
+const DOCS_URL = 'https://testfiesta.gitbook.io/workflowfiesta';
 
 /** Default values for settings. */
 const DEFAULTS = {
@@ -44,8 +48,10 @@ export function SettingsPanel({ authService, onClose }: SettingsPanelProps) {
   const [accountFingerprint, setAccountFingerprint] = useState<string | undefined>();
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
 
-  // Total selectable items: settings + sign out (if authenticated)
-  const totalItems = SETTING_FIELDS.length + (isAuthenticated ? 1 : 0);
+  // Total selectable items: settings + docs + sign out (if authenticated)
+  const totalItems = SETTING_FIELDS.length + 1 + (isAuthenticated ? 1 : 0);
+  const docsIndex = SETTING_FIELDS.length;
+  const signOutIndex = SETTING_FIELDS.length + 1;
 
   /** Get the display value for a setting field. */
   const getDisplayValue = (field: SettingFieldConfig): { value: string; isDefault: boolean; source?: string } => {
@@ -128,6 +134,15 @@ export function SettingsPanel({ authService, onClose }: SettingsPanelProps) {
     setMessage({ type: 'success', text: 'Signed out successfully' });
   }, [authService]);
 
+  const handleOpenDocs = useCallback(async () => {
+    const opened = await openUrl(DOCS_URL);
+    if (opened) {
+      setMessage({ type: 'success', text: 'Opening docs in browser...' });
+    } else {
+      setMessage({ type: 'error', text: `Open manually: ${DOCS_URL}` });
+    }
+  }, []);
+
   // Keyboard navigation
   useKeyboard((key) => {
     // Close on Escape
@@ -138,6 +153,12 @@ export function SettingsPanel({ authService, onClose }: SettingsPanelProps) {
       } else {
         onClose();
       }
+      return;
+    }
+
+    // Quick shortcut: ? to open docs
+    if (key.sequence === '?' && !editingField) {
+      void handleOpenDocs();
       return;
     }
 
@@ -159,7 +180,9 @@ export function SettingsPanel({ authService, onClose }: SettingsPanelProps) {
         const field = SETTING_FIELDS[selectedIndex]!;
         setEditingField(field.key);
         setEditValue(String(config[field.key] ?? ''));
-      } else if (selectedIndex === SETTING_FIELDS.length && isAuthenticated) {
+      } else if (selectedIndex === docsIndex) {
+        void handleOpenDocs();
+      } else if (selectedIndex === signOutIndex && isAuthenticated) {
         void handleSignOut();
       }
     }
@@ -167,7 +190,7 @@ export function SettingsPanel({ authService, onClose }: SettingsPanelProps) {
 
   const hint = editingField
     ? 'Enter to save, Esc to cancel'
-    : '↑↓ navigate, Enter to edit, Esc to close';
+    : '↑↓ navigate, Enter to edit, ? open docs, Esc to close';
 
   return (
     <box
@@ -247,12 +270,25 @@ export function SettingsPanel({ authService, onClose }: SettingsPanelProps) {
         );
       })}
 
+      {/* Documentation link */}
+      <box flexDirection="row" paddingLeft={1} marginTop={1}>
+        <text style={{ width: 2 }}>
+          <span fg={selectedIndex === docsIndex ? themeColors.primary : themeColors.text}>
+            {selectedIndex === docsIndex && !editingField ? '▸' : ' '}
+          </span>
+        </text>
+        <text>
+          <span fg={selectedIndex === docsIndex ? themeColors.primary : themeColors.info}>Documentation</span>
+          <span fg={themeColors.textSubtle}> (?) - Open in browser</span>
+        </text>
+      </box>
+
       {/* Sign Out option */}
       {isAuthenticated && (
         <box flexDirection="row" paddingLeft={1} marginTop={1}>
           <text style={{ width: 2 }}>
-            <span fg={selectedIndex === SETTING_FIELDS.length ? themeColors.primary : themeColors.text}>
-              {selectedIndex === SETTING_FIELDS.length && !editingField ? '▸' : ' '}
+            <span fg={selectedIndex === signOutIndex ? themeColors.primary : themeColors.text}>
+              {selectedIndex === signOutIndex && !editingField ? '▸' : ' '}
             </span>
           </text>
           <text fg={themeColors.error}>Sign Out</text>
