@@ -1,5 +1,13 @@
 # @workflowfiesta/cli
 
+## 0.0.7
+
+### Patch Changes
+
+- [#22](https://github.com/fiestatools/workflowfiesta-cli/pull/22) [`33eab4f`](https://github.com/fiestatools/workflowfiesta-cli/commit/33eab4f646a64ae8b7bbd019aa5c0f8c70886e2e) Thanks [@awaitimport](https://github.com/awaitimport)! - Fix release workflow condition by checking changeset files directly
+
+- [#23](https://github.com/fiestatools/workflowfiesta-cli/pull/23) [`4b849a8`](https://github.com/fiestatools/workflowfiesta-cli/commit/4b849a82306e4855332055f275c403e6a66bd269) Thanks [@awaitimport](https://github.com/awaitimport)! - Switch back to changesets action v1 for stability
+
 ## 0.0.6
 
 ### Patch Changes
