@@ -1,15 +1,15 @@
-import { TextAttributes } from '@opentui/core';
-import { useKeyboard } from '@opentui/react';
-import { useState } from 'react';
-import { themeColors, SUBTLE_BG, BRAND_ORANGE } from '../theme';
-import type { AgentSummary } from '../runs';
+import type { AgentSummary } from '../runs'
+import { TextAttributes } from '@opentui/core'
+import { useKeyboard } from '@opentui/react'
+import { useState } from 'react'
+import { BRAND_ORANGE, SUBTLE_BG, themeColors } from '../theme'
 
 /** Props for the agent picker overlay. */
 export interface AgentPickerProps {
-  agents: AgentSummary[];
-  currentAgentId?: string;
-  onSelect: (agentId: string) => void;
-  onClose: () => void;
+  agents: AgentSummary[]
+  currentAgentId?: string
+  onSelect: (agentId: string) => void
+  onClose: () => void
 }
 
 /**
@@ -18,28 +18,31 @@ export interface AgentPickerProps {
  * Mirrors the extension's agent picker.
  */
 export function AgentPicker({ agents, currentAgentId, onSelect, onClose }: AgentPickerProps) {
-  const initial = Math.max(0, agents.findIndex((a) => a.uid === currentAgentId));
-  const [selectedIndex, setSelectedIndex] = useState(initial);
+  const initial = Math.max(0, agents.findIndex(a => a.uid === currentAgentId))
+  const [selectedIndex, setSelectedIndex] = useState(initial)
 
   useKeyboard((key) => {
     if (key.name === 'escape') {
-      onClose();
-      return;
+      onClose()
+      return
     }
-    if (agents.length === 0) return;
+    if (agents.length === 0)
+      return
 
     if (key.name === 'up' || key.name === 'k') {
-      setSelectedIndex((prev) => (prev > 0 ? prev - 1 : agents.length - 1));
-    } else if (key.name === 'down' || key.name === 'j' || key.name === 'tab') {
-      setSelectedIndex((prev) => (prev < agents.length - 1 ? prev + 1 : 0));
-    } else if (key.name === 'return') {
-      const agent = agents[selectedIndex];
+      setSelectedIndex(prev => (prev > 0 ? prev - 1 : agents.length - 1))
+    }
+    else if (key.name === 'down' || key.name === 'j' || key.name === 'tab') {
+      setSelectedIndex(prev => (prev < agents.length - 1 ? prev + 1 : 0))
+    }
+    else if (key.name === 'return') {
+      const agent = agents[selectedIndex]
       if (agent) {
-        onSelect(agent.uid);
-        onClose();
+        onSelect(agent.uid)
+        onClose()
       }
     }
-  });
+  })
 
   return (
     <box
@@ -62,34 +65,36 @@ export function AgentPicker({ agents, currentAgentId, onSelect, onClose }: Agent
       <text fg={themeColors.textSubtle}> ↑↓ to move · Enter to select · Esc to close</text>
       <text style={{ height: 1 }} />
 
-      {agents.length === 0 ? (
-        <text fg={themeColors.textMuted} paddingLeft={1}>
-          No agents available. Create one in the web app first.
-        </text>
-      ) : (
-        agents.map((agent, index) => {
-          const isSelected = index === selectedIndex;
-          const isCurrent = agent.uid === currentAgentId;
-          return (
-            <box key={agent.uid} flexDirection="row" paddingLeft={1}>
-              <text style={{ width: 2 }}>
-                <span fg={isSelected ? themeColors.primary : themeColors.text}>{isSelected ? '▸' : ' '}</span>
-              </text>
-              <box flexDirection="column" flexGrow={1}>
-                <text>
-                  <span fg={isSelected ? themeColors.primary : themeColors.text} attributes={isSelected ? TextAttributes.BOLD : undefined}>
-                    {agent.name}
-                  </span>
-                  {isCurrent && <span fg={themeColors.success}> (current)</span>}
-                </text>
-                {agent.description && (
-                  <text fg={themeColors.textSubtle} attributes={TextAttributes.DIM}>{agent.description}</text>
-                )}
-              </box>
-            </box>
-          );
-        })
-      )}
+      {agents.length === 0
+        ? (
+            <text fg={themeColors.textMuted} paddingLeft={1}>
+              No agents available. Create one in the web app first.
+            </text>
+          )
+        : (
+            agents.map((agent, index) => {
+              const isSelected = index === selectedIndex
+              const isCurrent = agent.uid === currentAgentId
+              return (
+                <box key={agent.uid} flexDirection="row" paddingLeft={1}>
+                  <text style={{ width: 2 }}>
+                    <span fg={isSelected ? themeColors.primary : themeColors.text}>{isSelected ? '▸' : ' '}</span>
+                  </text>
+                  <box flexDirection="column" flexGrow={1}>
+                    <text>
+                      <span fg={isSelected ? themeColors.primary : themeColors.text} attributes={isSelected ? TextAttributes.BOLD : undefined}>
+                        {agent.name}
+                      </span>
+                      {isCurrent && <span fg={themeColors.success}> (current)</span>}
+                    </text>
+                    {agent.description && (
+                      <text fg={themeColors.textSubtle} attributes={TextAttributes.DIM}>{agent.description}</text>
+                    )}
+                  </box>
+                </box>
+              )
+            })
+          )}
     </box>
-  );
+  )
 }

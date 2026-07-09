@@ -1,21 +1,21 @@
-import { Component } from 'react';
-import type { ReactNode, ErrorInfo } from 'react';
-import { themeColors } from '../theme';
+import type { ErrorInfo, ReactNode } from 'react'
+import { Component } from 'react'
+import { themeColors } from '../theme'
 
 export interface ErrorBoundaryProps {
-  children: ReactNode;
+  children: ReactNode
   /** Custom fallback UI to show on error */
-  fallback?: ReactNode;
+  fallback?: ReactNode
   /** Callback when an error is caught */
-  onError?: (error: Error, info: { componentStack: string }) => void;
+  onError?: (error: Error, info: { componentStack: string }) => void
   /** Title shown in the error box */
-  title?: string;
+  title?: string
 }
 
 interface ErrorBoundaryState {
-  hasError: boolean;
-  error: Error | null;
-  componentStack: string;
+  hasError: boolean
+  error: Error | null
+  componentStack: string
 }
 
 /**
@@ -24,36 +24,36 @@ interface ErrorBoundaryState {
  */
 export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
   constructor(props: ErrorBoundaryProps) {
-    super(props);
-    this.state = { hasError: false, error: null, componentStack: '' };
+    super(props)
+    this.state = { hasError: false, error: null, componentStack: '' }
   }
 
   static getDerivedStateFromError(error: Error): Partial<ErrorBoundaryState> {
-    return { hasError: true, error };
+    return { hasError: true, error }
   }
 
   override componentDidCatch(error: Error, info: ErrorInfo) {
-    this.setState({ componentStack: info.componentStack ?? '' });
+    this.setState({ componentStack: info.componentStack ?? '' })
     this.props.onError?.(error, {
       componentStack: info.componentStack ?? '',
-    });
+    })
   }
 
   override render() {
-    const { hasError, error, componentStack } = this.state;
-    const { children, fallback, title = 'Error' } = this.props;
+    const { hasError, error, componentStack } = this.state
+    const { children, fallback, title = 'Error' } = this.props
 
     if (hasError) {
       if (fallback) {
-        return fallback;
+        return fallback
       }
 
-      const message = error?.message ?? 'An unknown error occurred';
+      const message = error?.message ?? 'An unknown error occurred'
       const stackLines = componentStack
         .split('\n')
-        .map((l) => l.trim())
+        .map(l => l.trim())
         .filter(Boolean)
-        .slice(0, 5);
+        .slice(0, 5)
 
       return (
         <box
@@ -82,9 +82,9 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
             Press Ctrl+C to exit
           </text>
         </box>
-      );
+      )
     }
 
-    return children;
+    return children
   }
 }

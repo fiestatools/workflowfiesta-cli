@@ -1,8 +1,8 @@
-import { TextAttributes } from '@opentui/core';
-import { BRAND_ORANGE } from '../theme';
+import { TextAttributes } from '@opentui/core'
+import { BRAND_ORANGE } from '../theme'
 
 export interface LoadingScreenProps {
-  message?: string;
+  message?: string
 }
 
 export function LoadingScreen({ message }: LoadingScreenProps) {
@@ -18,5 +18,5 @@ export function LoadingScreen({ message }: LoadingScreenProps) {
         )}
       </box>
     </box>
-  );
+  )
 }

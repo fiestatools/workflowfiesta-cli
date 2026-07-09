@@ -1,43 +1,43 @@
-import type { ChatState, ChatService } from '../chat';
-import type { Command } from '../commands';
-import type { AuthService } from '../auth';
-import { Header } from './Header';
-import { MessageList } from './MessageList';
-import { InputArea } from './InputArea';
-import { StatusBar } from './StatusBar';
-import { SidePanel } from './SidePanel';
-import { CommandPalette } from './CommandPalette';
-import { SettingsPanel } from './SettingsPanel';
-import { RequestOverlay } from './RequestOverlay';
-import { AgentPicker } from './AgentPicker';
-import { HelpDialog } from './HelpDialog';
-import { HistoryView } from './HistoryView';
-import { AccessTokenRevealOverlay } from './AccessTokenRevealOverlay';
+import type { AuthService } from '../auth'
+import type { ChatService, ChatState } from '../chat'
+import type { Command } from '../commands'
+import { AccessTokenRevealOverlay } from './AccessTokenRevealOverlay'
+import { AgentPicker } from './AgentPicker'
+import { CommandPalette } from './CommandPalette'
+import { Header } from './Header'
+import { HelpDialog } from './HelpDialog'
+import { HistoryView } from './HistoryView'
+import { InputArea } from './InputArea'
+import { MessageList } from './MessageList'
+import { RequestOverlay } from './RequestOverlay'
+import { SettingsPanel } from './SettingsPanel'
+import { SidePanel } from './SidePanel'
+import { StatusBar } from './StatusBar'
 
 /** Which command-triggered overlay is currently open, if any. */
-export type OverlayKind = 'agent' | 'help' | 'history' | null;
+export type OverlayKind = 'agent' | 'help' | 'history' | null
 
 /** Main chat view component props. */
 export interface ChatViewProps {
-  state: ChatState;
-  input: string;
-  onInputChange: (value: string) => void;
-  onSubmit: () => void;
-  isSubmitting: boolean;
-  chatService: ChatService;
-  version: string;
-  overlay: OverlayKind;
-  onOpenOverlay: (kind: OverlayKind) => void;
-  onCloseOverlay: () => void;
-  sidePanelVisible?: boolean;
-  settingsVisible?: boolean;
-  authService?: AuthService;
-  onToggleSidePanel?: () => void;
-  onNewChat?: () => void;
-  onOpenSettings?: () => void;
-  onCloseSettings?: () => void;
-  onClearChat?: () => void;
-  onRetry?: () => void;
+  state: ChatState
+  input: string
+  onInputChange: (value: string) => void
+  onSubmit: () => void
+  isSubmitting: boolean
+  chatService: ChatService
+  version: string
+  overlay: OverlayKind
+  onOpenOverlay: (kind: OverlayKind) => void
+  onCloseOverlay: () => void
+  sidePanelVisible?: boolean
+  settingsVisible?: boolean
+  authService?: AuthService
+  onToggleSidePanel?: () => void
+  onNewChat?: () => void
+  onOpenSettings?: () => void
+  onCloseSettings?: () => void
+  onClearChat?: () => void
+  onRetry?: () => void
 }
 
 /** Main chat view layout. */
@@ -63,72 +63,72 @@ export function ChatView({
   onRetry,
 }: ChatViewProps) {
   // The interactive request (if any) the run is parked on takes over the input.
-  const activeRequest = state.pendingRequests[0];
-  const reveal = state.pendingReveal;
-  const anyOverlay = settingsVisible || Boolean(activeRequest) || Boolean(reveal) || overlay !== null;
+  const activeRequest = state.pendingRequests[0]
+  const reveal = state.pendingReveal
+  const anyOverlay = settingsVisible || Boolean(activeRequest) || Boolean(reveal) || overlay !== null
   // Show command palette when input starts with / (but not when an overlay is open)
-  const showCommandPalette = input.startsWith('/') && !anyOverlay;
+  const showCommandPalette = input.startsWith('/') && !anyOverlay
 
   const handleCommandExecute = (command: Command) => {
     // Clear the input after command execution
-    onInputChange('');
+    onInputChange('')
 
     // Execute the command
     switch (command.name) {
       case 'new':
-        onNewChat?.();
-        break;
+        onNewChat?.()
+        break
       case 'clear':
-        onClearChat?.();
-        break;
+        onClearChat?.()
+        break
       case 'settings':
-        onOpenSettings?.();
-        break;
+        onOpenSettings?.()
+        break
       case 'panel':
-        onToggleSidePanel?.();
-        break;
+        onToggleSidePanel?.()
+        break
       case 'agent':
-        onOpenOverlay('agent');
-        break;
+        onOpenOverlay('agent')
+        break
       case 'help':
-        onOpenOverlay('help');
-        break;
+        onOpenOverlay('help')
+        break
       case 'version':
-        onOpenOverlay('help');
-        break;
+        onOpenOverlay('help')
+        break
       case 'history':
-        onOpenOverlay('history');
-        break;
+        onOpenOverlay('history')
+        break
       case 'retry':
-        onRetry?.();
-        break;
+        onRetry?.()
+        break
       case 'copy':
-        void chatService.copyLastReply();
-        break;
+        void chatService.copyLastReply()
+        break
       case 'theme':
       case 'model':
         // Placeholders owned by the team — no CLI behavior wired up yet.
-        break;
+        break
       default:
-        break;
+        break
     }
-  };
+  }
 
   const handleCommandClose = () => {
-    onInputChange('');
-  };
+    onInputChange('')
+  }
 
   return (
     <box flexDirection="row" flexGrow={1}>
       {/* Main chat area */}
       <box flexDirection="column" flexGrow={1}>
-        <Header 
+        <Header
           agentName={state.currentAgent?.name}
           isConnected={state.isConnected}
           isConnecting={state.isConnecting}
         />
-        
-        <MessageList 
+
+        <MessageList
           messages={state.messages}
           isTyping={state.isTyping}
         />
@@ -170,7 +170,7 @@ export function ChatView({
           <AgentPicker
             agents={state.agents}
             currentAgentId={state.currentAgent?.uid}
-            onSelect={(uid) => chatService.selectAgent(uid)}
+            onSelect={uid => chatService.selectAgent(uid)}
             onClose={onCloseOverlay}
           />
         )}
@@ -181,9 +181,9 @@ export function ChatView({
           <HistoryView
             conversations={chatService.listConversations()}
             currentUid={state.conversationUid}
-            onSelect={(uid) => void chatService.switchConversation(uid)}
+            onSelect={uid => void chatService.switchConversation(uid)}
             onNew={() => onNewChat?.()}
-            onForget={(uid) => chatService.forgetConversation(uid)}
+            onForget={uid => chatService.forgetConversation(uid)}
             onClose={onCloseOverlay}
           />
         )}
@@ -197,12 +197,12 @@ export function ChatView({
           isCommandMode={showCommandPalette}
           placeholder="Type a message... (/ for commands)"
         />
-        
+
         <StatusBar error={state.error} sidePanelVisible={sidePanelVisible} />
       </box>
 
       {/* Side panel */}
       <SidePanel state={state} isVisible={sidePanelVisible} />
     </box>
-  );
+  )
 }

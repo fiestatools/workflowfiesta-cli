@@ -1,70 +1,73 @@
-import { TextAttributes } from '@opentui/core';
-import { useKeyboard } from '@opentui/react';
-import type { InputProps } from '@opentui/react';
-import { useState, useCallback } from 'react';
-import { BRAND_ORANGE, themeColors } from '../theme';
-import type { AuthService } from '../auth';
-import { PasswordInput } from './PasswordInput';
+import type { InputProps } from '@opentui/react'
+import type { AuthService } from '../auth'
+import { TextAttributes } from '@opentui/core'
+import { useKeyboard } from '@opentui/react'
+import { useCallback, useState } from 'react'
+import { BRAND_ORANGE, themeColors } from '../theme'
+import { PasswordInput } from './PasswordInput'
 
 export interface AuthLoginProps {
-  authService: AuthService;
-  onSuccess: () => void;
-  onCancel: () => void;
+  authService: AuthService
+  onSuccess: () => void
+  onCancel: () => void
 }
 
 export function AuthLoginDialog({ authService, onSuccess, onCancel }: AuthLoginProps) {
-  const [token, setToken] = useState('');
-  const [apiUrl, setApiUrl] = useState('');
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [success, setSuccess] = useState(false);
-  const [activeField, setActiveField] = useState<'token' | 'apiUrl'>('token');
+  const [token, setToken] = useState('')
+  const [apiUrl, setApiUrl] = useState('')
+  const [isSubmitting, setIsSubmitting] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const [success, setSuccess] = useState(false)
+  const [activeField, setActiveField] = useState<'token' | 'apiUrl'>('token')
 
   useKeyboard((key) => {
     if (key.name === 'escape' && !isSubmitting) {
-      onCancel();
+      onCancel()
     }
     if (key.name === 'tab') {
-      setActiveField(prev => prev === 'token' ? 'apiUrl' : 'token');
+      setActiveField(prev => prev === 'token' ? 'apiUrl' : 'token')
     }
-  });
+  })
 
   const handleSubmit = useCallback((value: string) => {
     // Use the value passed directly from the input's onSubmit
     // For token field, use the passed value; for apiUrl field, use current state
-    const tokenValue = activeField === 'token' ? value : token;
-    
-    if (!tokenValue.trim() || isSubmitting) return;
+    const tokenValue = activeField === 'token' ? value : token
 
-    setIsSubmitting(true);
-    setError(null);
+    if (!tokenValue.trim() || isSubmitting)
+      return
+
+    setIsSubmitting(true)
+    setError(null)
 
     authService.signIn(tokenValue.trim(), apiUrl.trim() || undefined)
       .then(() => {
-        setSuccess(true);
+        setSuccess(true)
         setTimeout(() => {
-          onSuccess();
-        }, 1000);
+          onSuccess()
+        }, 1000)
       })
       .catch((err) => {
-        setError(err instanceof Error ? err.message : 'Failed to sign in');
+        setError(err instanceof Error ? err.message : 'Failed to sign in')
       })
       .finally(() => {
-        setIsSubmitting(false);
-      });
-  }, [activeField, token, apiUrl, isSubmitting, authService, onSuccess]);
+        setIsSubmitting(false)
+      })
+  }, [activeField, token, apiUrl, isSubmitting, authService, onSuccess])
 
   if (success) {
     return (
       <box alignItems="center" justifyContent="center" flexGrow={1}>
         <box flexDirection="column" alignItems="center" gap={1}>
           <text>
-            <span fg={themeColors.success}>✓</span> Successfully signed in!
+            <span fg={themeColors.success}>✓</span>
+            {' '}
+            Successfully signed in!
           </text>
           <text attributes={TextAttributes.DIM}>Starting chat...</text>
         </box>
       </box>
-    );
+    )
   }
 
   return (
@@ -117,7 +120,10 @@ export function AuthLoginDialog({ authService, onSuccess, onCancel }: AuthLoginP
         </box>
 
         {error && (
-          <text fg={themeColors.error}>Error: {error}</text>
+          <text fg={themeColors.error}>
+            Error:
+            {error}
+          </text>
         )}
 
         <box marginTop={1} flexDirection="row" gap={2}>
@@ -139,12 +145,12 @@ export function AuthLoginDialog({ authService, onSuccess, onCancel }: AuthLoginP
         )}
       </box>
     </box>
-  );
+  )
 }
 
 /** Props for the WelcomeScreen component. */
 export interface WelcomeScreenProps {
-  onLogin: () => void;
+  onLogin: () => void
 }
 
 /** Welcome screen shown when not authenticated. */
@@ -160,33 +166,39 @@ export function WelcomeScreen({ onLogin: _onLogin }: WelcomeScreenProps) {
 
         <box marginTop={2} flexDirection="column" alignItems="center" gap={1}>
           <text>
-            Press <span fg={themeColors.info}>L</span> to sign in with your access token
+            Press
+            {' '}
+            <span fg={themeColors.info}>L</span>
+            {' '}
+            to sign in with your access token
           </text>
           <text attributes={TextAttributes.DIM}>
-            or run: wf auth login --token {"<your-token>"}
+            or run: wf auth login --token
+            {' '}
+            {'<your-token>'}
           </text>
         </box>
       </box>
     </box>
-  );
+  )
 }
 
 /** Props for the AuthGate component. */
 export interface AuthGateProps {
-  authService: AuthService;
-  onAuthenticated: () => void;
+  authService: AuthService
+  onAuthenticated: () => void
 }
 
 /** Auth gate that shows welcome screen or login dialog. */
 export function AuthGate({ authService, onAuthenticated }: AuthGateProps) {
-  const [showLoginDialog, setShowLoginDialog] = useState(false);
+  const [showLoginDialog, setShowLoginDialog] = useState(false)
 
   // Handle 'L' key to open login dialog (only when not already showing it)
   useKeyboard((key) => {
     if (!showLoginDialog && (key.name === 'l' || key.name === 'L')) {
-      setShowLoginDialog(true);
+      setShowLoginDialog(true)
     }
-  });
+  })
 
   if (showLoginDialog) {
     return (
@@ -195,8 +207,8 @@ export function AuthGate({ authService, onAuthenticated }: AuthGateProps) {
         onSuccess={onAuthenticated}
         onCancel={() => setShowLoginDialog(false)}
       />
-    );
+    )
   }
 
-  return <WelcomeScreen onLogin={() => setShowLoginDialog(true)} />;
+  return <WelcomeScreen onLogin={() => setShowLoginDialog(true)} />
 }
