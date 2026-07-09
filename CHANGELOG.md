@@ -1,5 +1,11 @@
 # @workflowfiesta/cli
 
+## 0.0.5
+
+### Patch Changes
+
+- [#18](https://github.com/fiestatools/workflowfiesta-cli/pull/18) [`c980abf`](https://github.com/fiestatools/workflowfiesta-cli/commit/c980abf1d9116c823125c7186c60dcedce746cf7) Thanks [@awaitimport](https://github.com/awaitimport)! - Add customizable character prop to Divider component
+
 ## 0.0.4
 
 ### Patch Changes
