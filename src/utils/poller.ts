@@ -1,24 +1,24 @@
-import { logger } from '../logger';
+import { logger } from '../logger'
 
 /** Handle to a running poll; `stop()` is idempotent. */
 export interface PollHandle {
-  stop(): void;
+  stop: () => void
 }
 
 /** Options for {@link startPolling}. */
 export interface PollOptions {
   /** Delay between attempts, in milliseconds. */
-  intervalMs: number;
+  intervalMs: number
   /** Give up after this many attempts. */
-  maxAttempts: number;
+  maxAttempts: number
   /**
    * One poll attempt. Resolve `true` to stop (the condition is met), `false` to
    * keep polling. Thrown errors are treated as transient — logged at debug and
    * polling continues until the attempt cap.
    */
-  onTick: () => Promise<boolean>;
+  onTick: () => Promise<boolean>
   /** Invoked once if the attempt cap is reached without `onTick` returning true. */
-  onExhausted?: () => void;
+  onExhausted?: () => void
 }
 
 /**
@@ -28,36 +28,38 @@ export interface PollOptions {
  * `stop()` mid-tick prevents any late side effects.
  */
 export function startPolling({ intervalMs, maxAttempts, onTick, onExhausted }: PollOptions): PollHandle {
-  let attempts = 0;
-  let stopped = false;
-  let timer: ReturnType<typeof setInterval> | undefined;
+  let attempts = 0
+  let stopped = false
+  let timer: ReturnType<typeof setInterval> | undefined
 
   const stop = (): void => {
-    stopped = true;
+    stopped = true
     if (timer) {
-      clearInterval(timer);
-      timer = undefined;
+      clearInterval(timer)
+      timer = undefined
     }
-  };
+  }
 
   timer = setInterval(() => {
     void (async () => {
-      if (stopped) return;
-      attempts += 1;
+      if (stopped)
+        return
+      attempts += 1
       try {
         if (await onTick()) {
-          stop();
-          return;
+          stop()
+          return
         }
-      } catch (err) {
-        logger.debug(`poll tick failed: ${err instanceof Error ? err.message : String(err)}`);
+      }
+      catch (err) {
+        logger.debug(`poll tick failed: ${err instanceof Error ? err.message : String(err)}`)
       }
       if (!stopped && attempts >= maxAttempts) {
-        stop();
-        onExhausted?.();
+        stop()
+        onExhausted?.()
       }
-    })();
-  }, intervalMs);
+    })()
+  }, intervalMs)
 
-  return { stop };
+  return { stop }
 }

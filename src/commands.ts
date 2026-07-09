@@ -5,17 +5,17 @@
 /** A command that can be executed from the command palette. */
 export interface Command {
   /** Primary name of the command (used with /name). */
-  name: string;
+  name: string
   /** Short alias (e.g., 'n' for 'new'). */
-  alias?: string;
+  alias?: string
   /** Description shown in the palette. */
-  description: string;
+  description: string
   /** Category for grouping. */
-  category: 'chat' | 'settings' | 'navigation' | 'help';
+  category: 'chat' | 'settings' | 'navigation' | 'help'
   /** Whether the command requires arguments. */
-  requiresArgs?: boolean;
+  requiresArgs?: boolean
   /** Placeholder text for arguments. */
-  argsPlaceholder?: string;
+  argsPlaceholder?: string
 }
 
 /** All available commands. */
@@ -98,31 +98,32 @@ export const COMMANDS: Command[] = [
     description: 'Show version info',
     category: 'help',
   },
-];
+]
 
 /**
  * Filter commands by search query.
  * Matches against name, alias, and description.
  */
 export function filterCommands(query: string): Command[] {
-  if (!query) return COMMANDS;
+  if (!query)
+    return COMMANDS
 
-  const lowerQuery = query.toLowerCase();
+  const lowerQuery = query.toLowerCase()
 
   return COMMANDS.filter((cmd) => {
-    const nameMatch = cmd.name.toLowerCase().startsWith(lowerQuery);
-    const aliasMatch = cmd.alias?.toLowerCase().startsWith(lowerQuery);
-    const descMatch = cmd.description.toLowerCase().includes(lowerQuery);
-    return nameMatch || aliasMatch || descMatch;
-  });
+    const nameMatch = cmd.name.toLowerCase().startsWith(lowerQuery)
+    const aliasMatch = cmd.alias?.toLowerCase().startsWith(lowerQuery)
+    const descMatch = cmd.description.toLowerCase().includes(lowerQuery)
+    return nameMatch || aliasMatch || descMatch
+  })
 }
 
 /**
  * Find a command by exact name or alias.
  */
 export function findCommand(nameOrAlias: string): Command | undefined {
-  const lower = nameOrAlias.toLowerCase();
+  const lower = nameOrAlias.toLowerCase()
   return COMMANDS.find(
-    (cmd) => cmd.name.toLowerCase() === lower || cmd.alias?.toLowerCase() === lower
-  );
+    cmd => cmd.name.toLowerCase() === lower || cmd.alias?.toLowerCase() === lower,
+  )
 }

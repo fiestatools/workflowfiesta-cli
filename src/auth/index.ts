@@ -1,4 +1,4 @@
-export { AuthService } from './authService';
-export type { AuthStatus, AuthStateChange, AuthStateChangeListener } from './authService';
-export { CredentialStore } from './credentialStore';
-export { UnauthorizedError } from './authService';
+export { AuthService } from './authService'
+export type { AuthStateChange, AuthStateChangeListener, AuthStatus } from './authService'
+export { UnauthorizedError } from './authService'
+export { CredentialStore } from './credentialStore'

@@ -1,4 +1,4 @@
-import { logger } from '../logger';
+import { logger } from '../logger'
 
 /**
  * Copy text to the clipboard, robustly, across local and remote sessions.
@@ -21,51 +21,52 @@ import { logger } from '../logger';
  * modern terminals honor it; a few have it disabled by default.
  */
 export async function copyToClipboard(text: string): Promise<boolean> {
-  const native = { name: 'native', run: () => tryNativeCopy(text) };
-  const osc52 = { name: 'osc52', run: () => writeOsc52(text) };
+  const native = { name: 'native', run: () => tryNativeCopy(text) }
+  const osc52 = { name: 'osc52', run: () => writeOsc52(text) }
   // Over SSH, native tools hit the remote host — try the terminal (OSC 52) first.
-  const strategies = isRemoteSession() ? [osc52, native] : [native, osc52];
+  const strategies = isRemoteSession() ? [osc52, native] : [native, osc52]
 
   for (const strategy of strategies) {
     if (await strategy.run()) {
-      logger.debug(`Clipboard copy succeeded via ${strategy.name}`);
-      return true;
+      logger.debug(`Clipboard copy succeeded via ${strategy.name}`)
+      return true
     }
   }
 
-  logger.warn('Clipboard copy failed: no working clipboard mechanism');
-  return false;
+  logger.warn('Clipboard copy failed: no working clipboard mechanism')
+  return false
 }
 
 /** Whether we're in an SSH session, where native clipboard tools target the wrong host. */
 function isRemoteSession(): boolean {
-  return Boolean(process.env.SSH_TTY || process.env.SSH_CONNECTION || process.env.SSH_CLIENT);
+  return Boolean(process.env.SSH_TTY || process.env.SSH_CONNECTION || process.env.SSH_CLIENT)
 }
 
 /** Try each platform clipboard binary in turn, writing the text to its stdin. */
 async function tryNativeCopy(text: string): Promise<boolean> {
   for (const command of nativeCommands()) {
     try {
-      const proc = Bun.spawn(command, { stdin: 'pipe', stdout: 'ignore', stderr: 'ignore' });
-      proc.stdin.write(text);
-      await proc.stdin.end();
+      const proc = Bun.spawn(command, { stdin: 'pipe', stdout: 'ignore', stderr: 'ignore' })
+      proc.stdin.write(text)
+      await proc.stdin.end()
       if ((await proc.exited) === 0) {
-        return true;
+        return true
       }
-    } catch {
+    }
+    catch {
       // Tool not installed (ENOENT) or failed to spawn — try the next candidate.
     }
   }
-  return false;
+  return false
 }
 
 /** Candidate clipboard commands for the current platform, in preference order. */
 function nativeCommands(): string[][] {
   switch (process.platform) {
     case 'darwin':
-      return [['pbcopy']];
+      return [['pbcopy']]
     case 'win32':
-      return [['clip']];
+      return [['clip']]
     default:
       // Linux/BSD: Wayland, then X11 tools, then WSL's bridge to the Windows clipboard.
       return [
@@ -73,7 +74,7 @@ function nativeCommands(): string[][] {
         ['xclip', '-selection', 'clipboard'],
         ['xsel', '--clipboard', '--input'],
         ['clip.exe'],
-      ];
+      ]
   }
 }
 
@@ -85,14 +86,15 @@ function nativeCommands(): string[][] {
  */
 function writeOsc52(text: string): boolean {
   if (!process.stdout.isTTY) {
-    return false;
+    return false
   }
   try {
     // Written in a single call so the escape sequence can't be torn across frames.
-    process.stdout.write(buildOsc52(text, { tmux: Boolean(process.env.TMUX) }));
-    return true;
-  } catch {
-    return false;
+    process.stdout.write(buildOsc52(text, { tmux: Boolean(process.env.TMUX) }))
+    return true
+  }
+  catch {
+    return false
   }
 }
 
@@ -104,10 +106,10 @@ function writeOsc52(text: string): boolean {
  * swallows it. Exported for testing.
  */
 export function buildOsc52(text: string, opts: { tmux?: boolean } = {}): string {
-  const payload = Buffer.from(text, 'utf8').toString('base64');
-  const sequence = `\x1b]52;c;${payload}\x07`;
+  const payload = Buffer.from(text, 'utf8').toString('base64')
+  const sequence = `\x1B]52;c;${payload}\x07`
   if (opts.tmux) {
-    return `\x1bPtmux;${sequence.replace(/\x1b/g, '\x1b\x1b')}\x1b\\`;
+    return `\x1BPtmux;${sequence.replace(/\x1B/g, '\x1B\x1B')}\x1B\\`
   }
-  return sequence;
+  return sequence
 }

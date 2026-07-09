@@ -1,18 +1,18 @@
-import { TextAttributes } from '@opentui/core';
-import { themeColors, SUBTLE_BG } from '../theme';
-import type { AccessTokenRevealEvent } from '../runs/runEvents';
+import type { AccessTokenRevealEvent } from '../runs/runEvents'
+import { TextAttributes } from '@opentui/core'
+import { SUBTLE_BG, themeColors } from '../theme'
 
 /** Props for the access-token reveal card. */
 export interface AccessTokenCardProps {
-  reveal: AccessTokenRevealEvent;
+  reveal: AccessTokenRevealEvent
   /** Mask the secret (default): show a short identifying prefix, then bullets. */
-  masked?: boolean;
+  masked?: boolean
 }
 
 /** Format an ISO expiry into a short, human date; falls back to the raw value. */
 function formatExpiry(expiresAt: string): string {
-  const date = new Date(expiresAt);
-  return Number.isNaN(date.getTime()) ? expiresAt : date.toLocaleString();
+  const date = new Date(expiresAt)
+  return Number.isNaN(date.getTime()) ? expiresAt : date.toLocaleString()
 }
 
 /**
@@ -21,8 +21,8 @@ function formatExpiry(expiresAt: string): string {
  * The bullet count is fixed so it never leaks the real secret's length.
  */
 function maskedSecret(secret: string): string {
-  const prefix = secret.slice(0, 4);
-  return `${prefix}${'•'.repeat(24)}`;
+  const prefix = secret.slice(0, 4)
+  return `${prefix}${'•'.repeat(24)}`
 }
 
 /**
@@ -59,9 +59,12 @@ export function AccessTokenCard({ reveal, masked = true }: AccessTokenCardProps)
       </box>
       {reveal.expiresAt && (
         <text marginTop={1}>
-          <span fg={themeColors.textSubtle}>Expires: {formatExpiry(reveal.expiresAt)}</span>
+          <span fg={themeColors.textSubtle}>
+            Expires:
+            {formatExpiry(reveal.expiresAt)}
+          </span>
         </text>
       )}
     </box>
-  );
+  )
 }

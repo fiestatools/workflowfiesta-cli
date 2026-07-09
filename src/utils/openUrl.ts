@@ -1,5 +1,5 @@
-import open from 'open';
-import { logger } from '../logger';
+import open from 'open'
+import { logger } from '../logger'
 
 /**
  * Open a URL in the user's default browser.
@@ -13,10 +13,11 @@ import { logger } from '../logger';
  */
 export async function openUrl(url: string): Promise<boolean> {
   try {
-    await open(url);
-    return true;
-  } catch (err) {
-    logger.warn(`Failed to open URL in browser: ${err instanceof Error ? err.message : String(err)}`);
-    return false;
+    await open(url)
+    return true
+  }
+  catch (err) {
+    logger.warn(`Failed to open URL in browser: ${err instanceof Error ? err.message : String(err)}`)
+    return false
   }
 }

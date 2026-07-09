@@ -13,8 +13,8 @@ export class ApiError extends Error {
     /** Parsed response body, when one was returned. */
     readonly body?: unknown,
   ) {
-    super(message);
-    this.name = 'ApiError';
+    super(message)
+    this.name = 'ApiError'
   }
 }
 
@@ -25,8 +25,8 @@ export class ApiError extends Error {
  */
 export class UnauthorizedError extends ApiError {
   constructor(message = 'Unauthorized', body?: unknown) {
-    super(message, 401, body);
-    this.name = 'UnauthorizedError';
+    super(message, 401, body)
+    this.name = 'UnauthorizedError'
   }
 }
 
@@ -36,14 +36,14 @@ export class UnauthorizedError extends ApiError {
  */
 export class NetworkError extends Error {
   /** Underlying cause (the original `fetch` rejection or abort reason). */
-  readonly originalCause?: unknown;
+  readonly originalCause?: unknown
 
   constructor(
     message: string,
     cause?: unknown,
   ) {
-    super(message);
-    this.name = 'NetworkError';
-    this.originalCause = cause;
+    super(message)
+    this.name = 'NetworkError'
+    this.originalCause = cause
   }
 }

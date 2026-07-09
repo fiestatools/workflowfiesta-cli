@@ -5,26 +5,26 @@
  */
 export interface TokenProvider {
   /** Resolves to the current access token, or `undefined` when signed out. */
-  getToken(): Promise<string | undefined>;
+  getToken: () => Promise<string | undefined>
 }
 
 /** HTTP methods the client supports. */
-export type HttpMethod = 'GET' | 'POST' | 'PATCH' | 'PUT' | 'DELETE';
+export type HttpMethod = 'GET' | 'POST' | 'PATCH' | 'PUT' | 'DELETE'
 
 /** Query string values; `undefined` entries are omitted. */
-export type QueryParams = Record<string, string | number | boolean | undefined>;
+export type QueryParams = Record<string, string | number | boolean | undefined>
 
 /** Options for a single {@link ApiClient.request} call. */
 export interface RequestOptions {
-  method?: HttpMethod;
+  method?: HttpMethod
   /** JSON-serializable request body. Sets `Content-Type: application/json`. */
-  body?: unknown;
+  body?: unknown
   /** Query parameters appended to the URL. */
-  query?: QueryParams;
+  query?: QueryParams
   /** Caller-provided cancellation signal, combined with the internal timeout. */
-  signal?: AbortSignal;
+  signal?: AbortSignal
   /** Overrides the configured timeout for this request only. */
-  timeoutMs?: number;
+  timeoutMs?: number
   /**
    * Explicit bearer token, used instead of the {@link TokenProvider}.
    *
@@ -32,5 +32,5 @@ export interface RequestOptions {
    * When set, a 401 does NOT invoke the unauthorized handler, because there is
    * no stored session to invalidate — the caller interprets the failure.
    */
-  token?: string;
+  token?: string
 }

@@ -1,11 +1,11 @@
-import { TextAttributes } from '@opentui/core';
-import { themeColors } from '../theme';
+import { TextAttributes } from '@opentui/core'
+import { themeColors } from '../theme'
 
 /** Props for the Header component. */
 export interface HeaderProps {
-  agentName?: string;
-  isConnected: boolean;
-  isConnecting: boolean;
+  agentName?: string
+  isConnected: boolean
+  isConnecting: boolean
 }
 
 /** Header with branding and connection status. */
@@ -14,12 +14,12 @@ export function Header({ agentName, isConnected, isConnecting }: HeaderProps) {
     ? themeColors.warning
     : isConnected
       ? themeColors.primary
-      : themeColors.textMuted;
+      : themeColors.textMuted
   const statusText = isConnecting
     ? 'connecting'
     : isConnected
       ? 'connected'
-      : 'disconnected';
+      : 'disconnected'
 
   return (
     <box
@@ -30,12 +30,20 @@ export function Header({ agentName, isConnected, isConnecting }: HeaderProps) {
     >
       <text attributes={TextAttributes.BOLD}>
         <span fg={themeColors.primary}>WorkflowFiesta</span>
-        {agentName && <span fg={themeColors.textMuted}>{' '}{agentName}</span>}
+        {agentName && (
+          <span fg={themeColors.textMuted}>
+            {' '}
+            {agentName}
+          </span>
+        )}
       </text>
       <text attributes={TextAttributes.DIM}>
         <span fg={statusColor}>●</span>
-        <span fg={themeColors.textMuted}>{' '}{statusText}</span>
+        <span fg={themeColors.textMuted}>
+          {' '}
+          {statusText}
+        </span>
       </text>
     </box>
-  );
+  )
 }

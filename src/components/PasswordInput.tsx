@@ -1,18 +1,18 @@
-import type { KeyEvent, PasteEvent } from '@opentui/core';
-import { useKeyboard, usePaste } from '@opentui/react';
-import { useState } from 'react';
-import { themeColors, BRAND_ORANGE } from '../theme';
+import type { KeyEvent, PasteEvent } from '@opentui/core'
+import { useKeyboard, usePaste } from '@opentui/react'
+import { useState } from 'react'
+import { BRAND_ORANGE, themeColors } from '../theme'
 
 export interface PasswordInputProps {
-  value?: string;
-  onChange?: (value: string) => void;
-  onSubmit?: (value: string) => void;
-  placeholder?: string;
-  mask?: string;
-  showToggle?: boolean;
-  label?: string;
-  focused?: boolean;
-  cursor?: string;
+  value?: string
+  onChange?: (value: string) => void
+  onSubmit?: (value: string) => void
+  placeholder?: string
+  mask?: string
+  showToggle?: boolean
+  label?: string
+  focused?: boolean
+  cursor?: string
 }
 
 /**
@@ -30,70 +30,76 @@ export function PasswordInput({
   focused = true,
   cursor = '█',
 }: PasswordInputProps) {
-  const [internalValue, setInternalValue] = useState('');
-  const [isVisible, setIsVisible] = useState(false);
+  const [internalValue, setInternalValue] = useState('')
+  const [isVisible, setIsVisible] = useState(false)
 
-  const value = controlledValue ?? internalValue;
+  const value = controlledValue ?? internalValue
 
   const setValue = (newVal: string) => {
     if (onChange) {
-      onChange(newVal);
-    } else {
-      setInternalValue(newVal);
+      onChange(newVal)
     }
-  };
+    else {
+      setInternalValue(newVal)
+    }
+  }
 
   useKeyboard((key: KeyEvent) => {
-    if (!focused) return;
+    if (!focused)
+      return
 
     // Handle visibility toggle with Ctrl+R (reveal)
     if (showToggle && key.ctrl && key.name === 'r') {
-      setIsVisible((v) => !v);
-      return;
+      setIsVisible(v => !v)
+      return
     }
 
     // Let other modifier combos through
-    if (key.ctrl || key.meta || key.super) return;
+    if (key.ctrl || key.meta || key.super)
+      return
 
     // Handle submit
     if (key.name === 'return') {
-      onSubmit?.(value);
-      return;
+      onSubmit?.(value)
+      return
     }
 
     // Handle backspace/delete
     if (key.name === 'backspace' || key.name === 'delete') {
-      if (value.length > 0) setValue(value.slice(0, -1));
-      return;
+      if (value.length > 0)
+        setValue(value.slice(0, -1))
+      return
     }
 
     // Ignore navigation keys
     if (
-      key.name === 'escape' ||
-      key.name === 'up' ||
-      key.name === 'down' ||
-      key.name === 'tab'
+      key.name === 'escape'
+      || key.name === 'up'
+      || key.name === 'down'
+      || key.name === 'tab'
     ) {
-      return;
+      return
     }
 
     // Append printable characters
-    const seq = key.sequence;
+    const seq = key.sequence
     if (seq && seq.length === 1) {
-      const code = seq.charCodeAt(0);
+      const code = seq.charCodeAt(0)
       if (code >= 32 && code !== 127) {
-        setValue(value + seq);
+        setValue(value + seq)
       }
     }
-  });
+  })
 
   usePaste((event: PasteEvent) => {
-    if (!focused) return;
-    const pasted = new TextDecoder().decode(event.bytes).replace(/[\r\n]+/g, '');
-    if (pasted) setValue(value + pasted);
-  });
+    if (!focused)
+      return
+    const pasted = new TextDecoder().decode(event.bytes).replace(/[\r\n]+/g, '')
+    if (pasted)
+      setValue(value + pasted)
+  })
 
-  const displayValue = isVisible ? value : mask.repeat(value.length);
+  const displayValue = isVisible ? value : mask.repeat(value.length)
 
   return (
     <box flexDirection="column">
@@ -110,20 +116,26 @@ export function PasswordInput({
           flexGrow={1}
         >
           <text style={{ flexGrow: 1 }}>
-            {focused ? (
-              <>
-                {value.length > 0 ? (
-                  <span fg={themeColors.text}>{displayValue}</span>
-                ) : (
-                  <span fg={themeColors.textSubtle}>{placeholder}</span>
-                )}
-                <span fg={themeColors.primary}>{cursor}</span>
-              </>
-            ) : value.length > 0 ? (
-              <span fg={themeColors.text}>{displayValue}</span>
-            ) : (
-              <span fg={themeColors.textSubtle}>{placeholder}</span>
-            )}
+            {focused
+              ? (
+                  <>
+                    {value.length > 0
+                      ? (
+                          <span fg={themeColors.text}>{displayValue}</span>
+                        )
+                      : (
+                          <span fg={themeColors.textSubtle}>{placeholder}</span>
+                        )}
+                    <span fg={themeColors.primary}>{cursor}</span>
+                  </>
+                )
+              : value.length > 0
+                ? (
+                    <span fg={themeColors.text}>{displayValue}</span>
+                  )
+                : (
+                    <span fg={themeColors.textSubtle}>{placeholder}</span>
+                  )}
           </text>
         </box>
         {showToggle && focused && (
@@ -133,5 +145,5 @@ export function PasswordInput({
         )}
       </box>
     </box>
-  );
+  )
 }

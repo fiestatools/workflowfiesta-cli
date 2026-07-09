@@ -1,106 +1,110 @@
-import { useEffect, useMemo, useState } from 'react';
-import { useKeyboard } from '@opentui/react';
-import { TextAttributes } from '@opentui/core';
+import type { Command } from '../commands'
+import { TextAttributes } from '@opentui/core'
+import { useKeyboard } from '@opentui/react'
 
-import { COMMANDS, filterCommands, type Command } from '../commands';
-import { themeColors, SUBTLE_BG, BRAND_ORANGE } from '../theme';
+import { useEffect, useMemo, useState } from 'react'
+import { COMMANDS, filterCommands } from '../commands'
+import { BRAND_ORANGE, SUBTLE_BG, themeColors } from '../theme'
 
 /** Props for the CommandPalette component. */
 export interface CommandPaletteProps {
   /** Current input value (including the leading /). */
-  input: string;
+  input: string
   /** Called when a command is selected for execution. */
-  onExecute: (command: Command) => void;
+  onExecute: (command: Command) => void
   /** Called when the palette should close (escape pressed). */
-  onClose: () => void;
+  onClose: () => void
   /** Called when input should be updated (tab completion). */
-  onInputChange: (value: string) => void;
+  onInputChange: (value: string) => void
 }
 
 /** Command palette overlay for / commands. */
 export function CommandPalette({ input, onExecute, onClose, onInputChange }: CommandPaletteProps) {
   // Extract query from input (remove leading /)
-  const query = input.startsWith('/') ? input.slice(1).toLowerCase().trim() : '';
-  
-  const filteredCommands = useMemo(() => {
-    if (!query) return COMMANDS;
-    return filterCommands(query);
-  }, [query]);
+  const query = input.startsWith('/') ? input.slice(1).toLowerCase().trim() : ''
 
-  const [selectedIndex, setSelectedIndex] = useState(0);
+  const filteredCommands = useMemo(() => {
+    if (!query)
+      return COMMANDS
+    return filterCommands(query)
+  }, [query])
+
+  const [selectedIndex, setSelectedIndex] = useState(0)
 
   // Reset selection when filtered commands change
   useEffect(() => {
     setSelectedIndex((prev) => {
-      if (filteredCommands.length === 0) return 0;
-      if (prev >= filteredCommands.length) return filteredCommands.length - 1;
-      return prev < 0 ? 0 : prev;
-    });
-  }, [filteredCommands.length]);
+      if (filteredCommands.length === 0)
+        return 0
+      if (prev >= filteredCommands.length)
+        return filteredCommands.length - 1
+      return prev < 0 ? 0 : prev
+    })
+  }, [filteredCommands.length])
 
   // Get display label with alias if it matches
   const getDisplayLabel = (cmd: Command) => {
-    const isAliasMatch = cmd.alias?.toLowerCase().startsWith(query);
-    return isAliasMatch && cmd.alias ? `/${cmd.name} (${cmd.alias})` : `/${cmd.name}`;
-  };
+    const isAliasMatch = cmd.alias?.toLowerCase().startsWith(query)
+    return isAliasMatch && cmd.alias ? `/${cmd.name} (${cmd.alias})` : `/${cmd.name}`
+  }
 
   // Handle keyboard navigation
   useKeyboard((key) => {
     switch (key.name) {
       case 'up':
-        setSelectedIndex((prev) => (prev > 0 ? prev - 1 : filteredCommands.length - 1));
-        break;
+        setSelectedIndex(prev => (prev > 0 ? prev - 1 : filteredCommands.length - 1))
+        break
       case 'down':
-        setSelectedIndex((prev) => (prev < filteredCommands.length - 1 ? prev + 1 : 0));
-        break;
+        setSelectedIndex(prev => (prev < filteredCommands.length - 1 ? prev + 1 : 0))
+        break
       case 'tab': {
         // Tab completion - fill in the selected command
-        const selectedCommand = filteredCommands[selectedIndex];
+        const selectedCommand = filteredCommands[selectedIndex]
         if (selectedCommand) {
-          onInputChange('/' + selectedCommand.name);
+          onInputChange(`/${selectedCommand.name}`)
         }
-        break;
+        break
       }
       case 'return': {
         // Execute the selected command
-        const selectedCommand = filteredCommands[selectedIndex];
+        const selectedCommand = filteredCommands[selectedIndex]
         if (selectedCommand) {
-          onExecute(selectedCommand);
+          onExecute(selectedCommand)
         }
-        break;
+        break
       }
       case 'escape':
-        onClose();
-        break;
+        onClose()
+        break
       default:
-        break;
+        break
     }
-  });
+  })
 
   // Group commands by category for display
   const groupedCommands = useMemo(() => {
-    const groups: Record<string, Command[]> = {};
+    const groups: Record<string, Command[]> = {}
     for (const cmd of filteredCommands) {
-      const category = cmd.category;
+      const category = cmd.category
       if (!groups[category]) {
-        groups[category] = [];
+        groups[category] = []
       }
-      groups[category]!.push(cmd);
+      groups[category]!.push(cmd)
     }
-    return groups;
-  }, [filteredCommands]);
+    return groups
+  }, [filteredCommands])
 
   // Calculate global index for selection highlighting
   const getGlobalIndex = (category: string, localIndex: number): number => {
-    let idx = 0;
+    let idx = 0
     for (const [cat, cmds] of Object.entries(groupedCommands)) {
       if (cat === category) {
-        return idx + localIndex;
+        return idx + localIndex
       }
-      idx += cmds.length;
+      idx += cmds.length
     }
-    return -1;
-  };
+    return -1
+  }
 
   if (filteredCommands.length === 0) {
     return (
@@ -119,13 +123,13 @@ export function CommandPalette({ input, onExecute, onClose, onInputChange }: Com
       >
         <text fg={themeColors.textSubtle}>No matching commands</text>
       </box>
-    );
+    )
   }
 
   // Calculate height: header + categories + commands + spacing
-  const categoryCount = Object.keys(groupedCommands).length;
-  const commandCount = filteredCommands.length;
-  const maxHeight = Math.min(commandCount + categoryCount + 2, 15);
+  const categoryCount = Object.keys(groupedCommands).length
+  const commandCount = filteredCommands.length
+  const maxHeight = Math.min(commandCount + categoryCount + 2, 15)
 
   return (
     <box
@@ -161,12 +165,12 @@ export function CommandPalette({ input, onExecute, onClose, onInputChange }: Com
             <text fg={themeColors.textSubtle} attributes={TextAttributes.DIM}>
               {category.charAt(0).toUpperCase() + category.slice(1)}
             </text>
-            
+
             {/* Commands in this category */}
             {cmds.map((cmd, localIdx) => {
-              const globalIdx = getGlobalIndex(category, localIdx);
-              const isSelected = globalIdx === selectedIndex;
-              
+              const globalIdx = getGlobalIndex(category, localIdx)
+              const isSelected = globalIdx === selectedIndex
+
               return (
                 <box key={cmd.name} flexDirection="row">
                   <text style={{ width: 20 }}>
@@ -177,11 +181,11 @@ export function CommandPalette({ input, onExecute, onClose, onInputChange }: Com
                   </text>
                   <text fg={themeColors.textSubtle}>{cmd.description}</text>
                 </box>
-              );
+              )
             })}
           </box>
         ))}
       </scrollbox>
     </box>
-  );
+  )
 }
