@@ -1,5 +1,11 @@
 # @workflowfiesta/cli
 
+## 0.0.3
+
+### Patch Changes
+
+- [#28](https://github.com/fiestatools/workflowfiesta-cli/pull/28) [`c4e5e0a`](https://github.com/fiestatools/workflowfiesta-cli/commit/c4e5e0a6e137e7ae4cd835b7fdf5c2177c6e0510) Thanks [@awaitimport](https://github.com/awaitimport)! - Fix shift+enter to insert newline in chat input
+
 ## 0.0.2
 
 ### Patch Changes
