@@ -76,8 +76,14 @@ export function InputArea({
     const isEnterEvent = event.name === 'return' || event.name === 'linefeed'
 
     if (isEnterEvent) {
-      // Shift+Enter = newline (let it pass through)
+      // Shift+Enter = insert newline manually
       if (event.shift) {
+        event.preventDefault()
+        event.stopPropagation()
+        const ref = textareaRef.current
+        if (ref) {
+          ref.newLine()
+        }
         return
       }
 
