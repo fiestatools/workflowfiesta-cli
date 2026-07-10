@@ -1,5 +1,5 @@
 ---
-"workflowfiesta": patch
+"@workflowfiesta/cli": patch
 ---
 
 Fix release asset naming and add install script
