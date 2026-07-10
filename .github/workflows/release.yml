@@ -68,11 +68,11 @@ jobs:
             exit 0
           fi
 
-          # Create tarballs for direct download
+          # Create tarballs for direct download (binary only)
           cd dist
-          for dir in cli-*/; do
+          for dir in workflowfiesta-*/; do
             name="${dir%/}"
-            tar -czf "${name}-v${VERSION}.tar.gz" "$name"
+            tar -czf "${name}-v${VERSION}.tar.gz" -C "$name/bin" .
           done
           cd ..
 
@@ -81,7 +81,7 @@ jobs:
           gh release create "v${VERSION}" \
             --title "v${VERSION}" \
             --generate-notes \
-            dist/cli-*-v${VERSION}.tar.gz
+            dist/workflowfiesta-*-v${VERSION}.tar.gz
 
       - name: Summary
         if: steps.check.outputs.hasChangesets == 'false'
