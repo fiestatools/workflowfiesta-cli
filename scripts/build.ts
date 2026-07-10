@@ -67,7 +67,7 @@ for (const item of targets) {
   ]
     .filter(Boolean)
     .join('-')
-  const name = target.replace(binary, 'cli')
+  const name = target.replace(binary, 'workflowfiesta')
   const binaryExt = item.os === 'win32' ? '.exe' : ''
   console.log(`building ${name}`)
 
