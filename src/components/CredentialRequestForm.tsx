@@ -145,6 +145,7 @@ export function CredentialRequestForm({ event, onSubmit, onTest, onCancel }: Cre
         <text fg={themeColors.textMuted}>
           {' '}
           Provider:
+          {' '}
           {event.provider}
         </text>
       )}
