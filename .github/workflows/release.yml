@@ -315,6 +315,12 @@ jobs:
             dist/workflowfiesta-*-v${VERSION}.tar.gz \
             dist/checksums.txt
 
+      - name: Upload checksums artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: checksums
+          path: dist/checksums.txt
+
       - name: Summary
         run: |
           VERSION=$(node -p "require('./package.json').version")
@@ -338,6 +344,12 @@ jobs:
       - name: Checkout
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4
 
+      - name: Download checksums artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: checksums
+          path: .
+
       - name: Setup Bun
         uses: oven-sh/setup-bun@735343b667d3e6f658f44d0eca948eb6282f2b76 # v2
         with:
@@ -348,6 +360,12 @@ jobs:
           GH_TOKEN: ${{ secrets.GH_CI_TOKEN }}
         run: |
           VERSION=$(node -p "require('./package.json').version")
+
+          # Parse checksums from artifact and export as env vars
+          export DARWIN_ARM64_SHA256=$(grep "darwin-arm64" checksums.txt | awk '{print $1}')
+          export DARWIN_X64_SHA256=$(grep "darwin-x64-v" checksums.txt | awk '{print $1}')
+          export LINUX_ARM64_SHA256=$(grep "linux-arm64" checksums.txt | awk '{print $1}')
+          export LINUX_X64_SHA256=$(grep "linux-x64-v" checksums.txt | awk '{print $1}')
 
           # Generate the formula
           bun run scripts/generate-homebrew-formula.ts "${VERSION}" workflowfiesta.rb
