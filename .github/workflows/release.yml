@@ -17,21 +17,33 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       hasChangesets: ${{ steps.check.outputs.hasChangesets }}
+      shouldRelease: ${{ steps.check.outputs.shouldRelease }}
     steps:
       - name: Checkout
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4
 
       - name: Check for changesets
         id: check
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: |
           # Check if there are any changeset files (excluding README and config)
           CHANGESETS=$(find .changeset -name "*.md" ! -name "README.md" 2>/dev/null | wc -l)
           if [ "$CHANGESETS" -gt 0 ]; then
             echo "hasChangesets=true" >> $GITHUB_OUTPUT
+            echo "shouldRelease=false" >> $GITHUB_OUTPUT
             echo "Found $CHANGESETS changeset(s)"
           else
             echo "hasChangesets=false" >> $GITHUB_OUTPUT
-            echo "No changesets found"
+            # Check if this version is already released
+            VERSION=$(node -p "require('./package.json').version")
+            if gh release view "v${VERSION}" &>/dev/null; then
+              echo "shouldRelease=false" >> $GITHUB_OUTPUT
+              echo "Version v${VERSION} already released, skipping build"
+            else
+              echo "shouldRelease=true" >> $GITHUB_OUTPUT
+              echo "Version v${VERSION} not yet released, will build and release"
+            fi
           fi
 
   create-release-pr:
@@ -63,7 +75,7 @@ jobs:
   build:
     name: Build CLI binaries
     needs: check-changesets
-    if: needs.check-changesets.outputs.hasChangesets == 'false'
+    if: needs.check-changesets.outputs.shouldRelease == 'true'
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -282,12 +294,6 @@ jobs:
         run: |
           VERSION=$(node -p "require('./package.json').version")
 
-          # Check if this version is already released
-          if gh release view "v${VERSION}" &>/dev/null; then
-            echo "Release v${VERSION} already exists, skipping"
-            exit 0
-          fi
-
           # Create tarballs for direct download (binary only)
           cd dist
           for dir in workflowfiesta-*/; do
@@ -342,12 +348,6 @@ jobs:
           GH_TOKEN: ${{ secrets.GH_CI_TOKEN }}
         run: |
           VERSION=$(node -p "require('./package.json').version")
-
-          # Check if this version is already released (skip if not)
-          if ! gh release view "v${VERSION}" &>/dev/null; then
-            echo "Release v${VERSION} does not exist, skipping Homebrew update"
-            exit 0
-          fi
 
           # Generate the formula
           bun run scripts/generate-homebrew-formula.ts "${VERSION}" workflowfiesta.rb
