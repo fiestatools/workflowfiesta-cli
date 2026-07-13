@@ -1,5 +1,11 @@
 # @workflowfiesta/cli
 
+## 0.1.0
+
+### Minor Changes
+
+- [#32](https://github.com/fiestatools/workflowfiesta-cli/pull/32) [`daba5fb`](https://github.com/fiestatools/workflowfiesta-cli/commit/daba5fb51ffe869fd19f27957bd4c09c0c2f993b) Thanks [@awaitimport](https://github.com/awaitimport)! - Add input history navigation with up/down arrow keys to cycle through previously submitted prompts
+
 ## 0.0.3
 
 ### Patch Changes
