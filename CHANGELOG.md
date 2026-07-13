@@ -1,5 +1,11 @@
 # @workflowfiesta/cli
 
+## 0.1.1
+
+### Patch Changes
+
+- [#35](https://github.com/fiestatools/workflowfiesta-cli/pull/35) [`eaf4083`](https://github.com/fiestatools/workflowfiesta-cli/commit/eaf40833d0dd70c6a7dd6861d187bcf33b079f4a) Thanks [@awaitimport](https://github.com/awaitimport)! - Add missing spaces in components and add missing shortcut in HepDialog
+
 ## 0.1.0
 
 ### Minor Changes
