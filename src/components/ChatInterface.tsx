@@ -12,7 +12,15 @@ export interface ChatInterfaceProps {
 /** Main chat interface with keyboard shortcuts and state management. */
 export function ChatInterface({ services }: ChatInterfaceProps) {
   const state = useChatState(services.chatService)
-  const { input, setInput, isSubmitting, handleSubmit } = useInput(services.chatService)
+  const {
+    input,
+    setInput,
+    isSubmitting,
+    handleSubmit,
+    navigateHistoryUp,
+    navigateHistoryDown,
+    resetHistoryNavigation,
+  } = useInput(services.chatService)
   const [sidePanelVisible, setSidePanelVisible] = useState(true)
   const [settingsVisible, setSettingsVisible] = useState(false)
   const [overlay, setOverlay] = useState<OverlayKind>(null)
@@ -93,6 +101,9 @@ export function ChatInterface({ services }: ChatInterfaceProps) {
       onCloseSettings={closeSettings}
       onClearChat={clearChat}
       onRetry={retry}
+      onHistoryUp={navigateHistoryUp}
+      onHistoryDown={navigateHistoryDown}
+      onHistoryReset={resetHistoryNavigation}
     />
   )
 }

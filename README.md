@@ -1,7 +1,9 @@
 <p align="center">
-  <img src="https://workflowfiesta.com/logo.svg" alt="WorkflowFiesta logo" width="120">
+  <img src="assets/logo.svg" alt="WorkflowFiesta logo" width="200">
 </p>
+
 <p align="center">AI-powered workflow automation in your terminal.</p>
+
 <p align="center">
   <a href="https://github.com/fiestatools/workflowfiesta-cli/releases"><img alt="GitHub release" src="https://img.shields.io/github/v/release/fiestatools/workflowfiesta-cli?style=flat-square" /></a>
   <a href="https://github.com/fiestatools/workflowfiesta-cli/actions/workflows/release.yml"><img alt="Build status" src="https://img.shields.io/github/actions/workflow/status/fiestatools/workflowfiesta-cli/release.yml?style=flat-square&branch=main" /></a>
