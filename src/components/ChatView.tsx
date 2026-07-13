@@ -38,6 +38,12 @@ export interface ChatViewProps {
   onCloseSettings?: () => void
   onClearChat?: () => void
   onRetry?: () => void
+  /** Navigate to older input in history (up arrow). */
+  onHistoryUp?: () => string | undefined
+  /** Navigate to newer input in history (down arrow). */
+  onHistoryDown?: () => string | undefined
+  /** Reset history navigation when user types. */
+  onHistoryReset?: () => void
 }
 
 /** Main chat view layout. */
@@ -61,6 +67,9 @@ export function ChatView({
   onCloseSettings,
   onClearChat,
   onRetry,
+  onHistoryUp,
+  onHistoryDown,
+  onHistoryReset,
 }: ChatViewProps) {
   // The interactive request (if any) the run is parked on takes over the input.
   const activeRequest = state.pendingRequests[0]
@@ -196,6 +205,9 @@ export function ChatView({
           isStreaming={state.isTyping}
           isCommandMode={showCommandPalette}
           placeholder="Type a message... (/ for commands)"
+          onHistoryUp={onHistoryUp}
+          onHistoryDown={onHistoryDown}
+          onHistoryReset={onHistoryReset}
         />
 
         <StatusBar error={state.error} sidePanelVisible={sidePanelVisible} />

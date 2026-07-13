@@ -13,6 +13,12 @@ export interface InputAreaProps {
   placeholder?: string
   /** When true (input is a `/command`), Enter is left to the command palette. */
   isCommandMode?: boolean
+  /** Navigate to older input in history (up arrow). */
+  onHistoryUp?: () => string | undefined
+  /** Navigate to newer input in history (down arrow). */
+  onHistoryDown?: () => string | undefined
+  /** Reset history navigation when user types. */
+  onHistoryReset?: () => void
 }
 
 /** Input area for typing messages with multiline support. */
@@ -24,6 +30,9 @@ export function InputArea({
   isStreaming = false,
   placeholder,
   isCommandMode = false,
+  onHistoryUp,
+  onHistoryDown,
+  onHistoryReset,
 }: InputAreaProps) {
   const terminalDimensions = useTerminalDimensions()
   const textareaRef = useRef<TextareaRenderable | null>(null)
@@ -75,6 +84,28 @@ export function InputArea({
   const handleKeyDown = (event: KeyEvent) => {
     const isEnterEvent = event.name === 'return' || event.name === 'linefeed'
 
+    // Up arrow: navigate to older history entry (only when input is single-line or cursor is at start)
+    if (event.name === 'up' && onHistoryUp) {
+      // Only navigate history if input is empty or single-line (no newlines)
+      if (!value.includes('\n')) {
+        event.preventDefault()
+        event.stopPropagation()
+        onHistoryUp()
+        return
+      }
+    }
+
+    // Down arrow: navigate to newer history entry (only when input is single-line or cursor is at end)
+    if (event.name === 'down' && onHistoryDown) {
+      // Only navigate history if input is empty or single-line (no newlines)
+      if (!value.includes('\n')) {
+        event.preventDefault()
+        event.stopPropagation()
+        onHistoryDown()
+        return
+      }
+    }
+
     if (isEnterEvent) {
       // Shift+Enter = insert newline manually
       if (event.shift) {
@@ -108,6 +139,8 @@ export function InputArea({
     const ref = textareaRef.current
     if (ref) {
       onChange(ref.plainText)
+      // Reset history navigation when user types manually
+      onHistoryReset?.()
     }
   }
 
