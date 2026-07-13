@@ -28,6 +28,7 @@ export function StatusBar({ error, sidePanelVisible }: StatusBarProps) {
     <box paddingX={1}>
       <text fg={themeColors.error}>
         Error:
+        {' '}
         {error}
       </text>
     </box>

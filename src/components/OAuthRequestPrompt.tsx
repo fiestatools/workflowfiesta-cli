@@ -68,6 +68,7 @@ export function OAuthRequestPrompt({ event, onConnect, onCancel }: OAuthRequestP
         <span fg={themeColors.primary} attributes={TextAttributes.BOLD}>
           {' '}
           Connect
+          {' '}
           {event.provider}
         </span>
       </text>
@@ -75,6 +76,7 @@ export function OAuthRequestPrompt({ event, onConnect, onCancel }: OAuthRequestP
       {event.scopes.length > 0 && (
         <text fg={themeColors.textSubtle} paddingLeft={1}>
           Scopes:
+          {' '}
           {event.scopes.join(', ')}
         </text>
       )}

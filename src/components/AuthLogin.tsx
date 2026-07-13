@@ -122,6 +122,7 @@ export function AuthLoginDialog({ authService, onSuccess, onCancel }: AuthLoginP
         {error && (
           <text fg={themeColors.error}>
             Error:
+            {' '}
             {error}
           </text>
         )}

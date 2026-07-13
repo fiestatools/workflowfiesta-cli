@@ -18,6 +18,7 @@ const SHORTCUTS: [string, string][] = [
   ['/', 'Open command palette'],
   ['Enter', 'Send message'],
   ['Shift+Enter', 'Newline'],
+  ['↑/↓', 'Input history navigation'],
   ['Esc', 'Cancel / close overlay'],
 ]
 
