@@ -1,5 +1,11 @@
 # @workflowfiesta/cli
 
+## 0.3.1
+
+### Patch Changes
+
+- [#45](https://github.com/fiestatools/workflowfiesta-cli/pull/45) [`4bd46db`](https://github.com/fiestatools/workflowfiesta-cli/commit/4bd46db98cb75166381e2689649355d775b853e9) Thanks [@awaitimport](https://github.com/awaitimport)! - Fix macOS code signing error when loading OpenTUI native library
+
 ## 0.3.0
 
 ### Minor Changes
