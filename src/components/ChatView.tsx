@@ -13,9 +13,10 @@ import { RequestOverlay } from './RequestOverlay'
 import { SettingsPanel } from './SettingsPanel'
 import { SidePanel } from './SidePanel'
 import { StatusBar } from './StatusBar'
+import { StatusDialog } from './StatusDialog'
 
 /** Which command-triggered overlay is currently open, if any. */
-export type OverlayKind = 'agent' | 'help' | 'history' | null
+export type OverlayKind = 'agent' | 'help' | 'history' | 'status' | null
 
 /** Main chat view component props. */
 export interface ChatViewProps {
@@ -108,6 +109,9 @@ export function ChatView({
       case 'history':
         onOpenOverlay('history')
         break
+      case 'status':
+        onOpenOverlay('status')
+        break
       case 'retry':
         onRetry?.()
         break
@@ -195,6 +199,9 @@ export function ChatView({
             onForget={uid => chatService.forgetConversation(uid)}
             onClose={onCloseOverlay}
           />
+        )}
+        {!activeRequest && !reveal && overlay === 'status' && (
+          <StatusDialog state={state} version={version} onClose={onCloseOverlay} />
         )}
 
         <InputArea

@@ -71,6 +71,11 @@ export function ChatInterface({ services }: ChatInterfaceProps) {
       case 'n':
         newChat()
         break
+      case 'y':
+        // Copy last reply to clipboard
+        if (!modalOpen && !settingsVisible)
+          void services.chatService.copyLastReply()
+        break
       default:
         break
     }
