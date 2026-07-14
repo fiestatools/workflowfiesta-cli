@@ -98,6 +98,11 @@ export const COMMANDS: Command[] = [
     description: 'Show version info',
     category: 'help',
   },
+  {
+    name: 'status',
+    description: 'Show current status',
+    category: 'help',
+  },
 ]
 
 /**

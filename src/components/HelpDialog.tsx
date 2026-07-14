@@ -14,6 +14,7 @@ const SHORTCUTS: [string, string][] = [
   ['Ctrl+B', 'Toggle side panel'],
   ['Ctrl+S', 'Toggle settings'],
   ['Ctrl+N', 'New conversation'],
+  ['Ctrl+Y', 'Copy last reply'],
   ['Ctrl+C', 'Quit'],
   ['/', 'Open command palette'],
   ['Enter', 'Send message'],

@@ -10,6 +10,13 @@ export interface MessageProps {
   message: ChatMessage
 }
 
+/** Format timestamp for display (HH:MM format). */
+function formatTimestamp(date: Date): string {
+  const hours = date.getHours().toString().padStart(2, '0')
+  const minutes = date.getMinutes().toString().padStart(2, '0')
+  return `${hours}:${minutes}`
+}
+
 /** Single chat message display. */
 export function Message({ message }: MessageProps) {
   const isUser = message.role === 'user'
@@ -23,6 +30,7 @@ export function Message({ message }: MessageProps) {
       : themeColors.assistant
 
   const roleLabel = isUser ? 'You' : isSystem ? 'System' : 'Assistant'
+  const timestamp = formatTimestamp(message.timestamp)
 
   return (
     <box
@@ -35,6 +43,10 @@ export function Message({ message }: MessageProps) {
       <box flexDirection="row">
         <text attributes={TextAttributes.BOLD}>
           <span fg={roleColor}>{roleLabel}</span>
+          {' '}
+        </text>
+        <text attributes={TextAttributes.DIM}>
+          <span fg={themeColors.textSubtle}>{timestamp}</span>
           {' '}
         </text>
         {message.isStreaming && <LoadingSpinner />}
