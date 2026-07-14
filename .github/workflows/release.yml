@@ -117,9 +117,15 @@ jobs:
       - name: Download and setup CodeSignTool
         run: |
           curl -fsSL -o CodeSignTool.zip "https://www.ssl.com/download/codesigntool-for-linux-and-macos/"
-          mkdir -p CodeSignTool
-          unzip -o CodeSignTool.zip -d CodeSignTool
+          unzip -o CodeSignTool.zip
           rm CodeSignTool.zip
+          # Find the extracted directory (handles versioned directory names)
+          CST_DIR=$(find . -maxdepth 1 -type d -name "CodeSignTool*" | head -1)
+          if [ -z "$CST_DIR" ]; then
+            echo "Error: CodeSignTool directory not found after extraction"
+            exit 1
+          fi
+          mv "$CST_DIR" CodeSignTool
           chmod +x CodeSignTool/CodeSignTool.sh
 
       - name: Sign Windows binaries
