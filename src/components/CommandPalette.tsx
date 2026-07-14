@@ -3,15 +3,15 @@ import { TextAttributes } from '@opentui/core'
 import { useKeyboard } from '@opentui/react'
 
 import { useEffect, useMemo, useState } from 'react'
-import { COMMANDS, filterCommands } from '../commands'
+import { COMMANDS, filterCommands, findCommand, parseCommandInput } from '../commands'
 import { BRAND_ORANGE, SUBTLE_BG, themeColors } from '../theme'
 
 /** Props for the CommandPalette component. */
 export interface CommandPaletteProps {
   /** Current input value (including the leading /). */
   input: string
-  /** Called when a command is selected for execution. */
-  onExecute: (command: Command) => void
+  /** Called when a command is selected for execution, with any typed arguments. */
+  onExecute: (command: Command, args: string) => void
   /** Called when the palette should close (escape pressed). */
   onClose: () => void
   /** Called when input should be updated (tab completion). */
@@ -20,14 +20,21 @@ export interface CommandPaletteProps {
 
 /** Command palette overlay for / commands. */
 export function CommandPalette({ input, onExecute, onClose, onInputChange }: CommandPaletteProps) {
-  // Extract query from input (remove leading /)
-  const query = input.startsWith('/') ? input.slice(1).toLowerCase().trim() : ''
+  // Split input (minus the leading /) into the command word and its arguments.
+  const { word, args } = parseCommandInput(input.startsWith('/') ? input.slice(1) : '')
+  const query = word.toLowerCase()
 
   const filteredCommands = useMemo(() => {
+    // Once arguments are being typed, only an exact argument-taking command
+    // still matches (e.g. "/rename My title" pins the palette to /rename).
+    if (args) {
+      const exact = findCommand(query)
+      return exact?.requiresArgs ? [exact] : []
+    }
     if (!query)
       return COMMANDS
     return filterCommands(query)
-  }, [query])
+  }, [query, args])
 
   const [selectedIndex, setSelectedIndex] = useState(0)
 
@@ -58,19 +65,26 @@ export function CommandPalette({ input, onExecute, onClose, onInputChange }: Com
         setSelectedIndex(prev => (prev < filteredCommands.length - 1 ? prev + 1 : 0))
         break
       case 'tab': {
-        // Tab completion - fill in the selected command
+        // Tab completion - fill in the selected command. Argument-taking
+        // commands get a trailing space so the user can keep typing.
         const selectedCommand = filteredCommands[selectedIndex]
         if (selectedCommand) {
-          onInputChange(`/${selectedCommand.name}`)
+          onInputChange(`/${selectedCommand.name}${selectedCommand.requiresArgs ? ' ' : ''}`)
         }
         break
       }
       case 'return': {
-        // Execute the selected command
         const selectedCommand = filteredCommands[selectedIndex]
-        if (selectedCommand) {
-          onExecute(selectedCommand)
+        if (!selectedCommand) {
+          break
         }
+        // An argument-taking command with nothing typed yet completes to
+        // "/name " so the user can type the arguments, instead of executing.
+        if (selectedCommand.requiresArgs && !args) {
+          onInputChange(`/${selectedCommand.name} `)
+          break
+        }
+        onExecute(selectedCommand, args)
         break
       }
       case 'escape':
@@ -179,7 +193,15 @@ export function CommandPalette({ input, onExecute, onClose, onInputChange }: Com
                       {getDisplayLabel(cmd)}
                     </span>
                   </text>
-                  <text fg={themeColors.textSubtle}>{cmd.description}</text>
+                  <text fg={themeColors.textSubtle}>
+                    {cmd.requiresArgs && cmd.argsPlaceholder && (
+                      <span attributes={TextAttributes.DIM}>
+                        {cmd.argsPlaceholder}
+                        {' · '}
+                      </span>
+                    )}
+                    {cmd.description}
+                  </text>
                 </box>
               )
             })}

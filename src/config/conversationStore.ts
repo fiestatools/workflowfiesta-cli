@@ -91,6 +91,16 @@ export class ConversationStore {
     this.persist()
   }
 
+  /** Rename a conversation in the local index. Unknown UIDs are ignored. */
+  rename(uid: string, title: string): void {
+    const entry = this.list().find(c => c.uid === uid)
+    if (!entry || !title) {
+      return
+    }
+    entry.title = title
+    this.persist()
+  }
+
   /** Forget a conversation (local index only — the backend thread is untouched). */
   remove(uid: string): void {
     this.cache = this.list().filter(c => c.uid !== uid)

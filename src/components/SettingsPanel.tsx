@@ -270,7 +270,7 @@ export function SettingsPanel({ authService, onClose }: SettingsPanelProps) {
               ? (
                   <input
                     value={editValue}
-                    onChange={setEditValue}
+                    onInput={setEditValue}
                     onSubmit={handleSave}
                     placeholder={field.defaultValue}
                     placeholderColor={themeColors.textSubtle}

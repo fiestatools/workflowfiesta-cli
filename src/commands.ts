@@ -50,6 +50,13 @@ export const COMMANDS: Command[] = [
     description: 'Switch to a different agent',
     category: 'chat',
   },
+  {
+    name: 'rename',
+    description: 'Rename the current conversation',
+    category: 'chat',
+    requiresArgs: true,
+    argsPlaceholder: '<new title>',
+  },
 
   // Settings commands
   {
@@ -131,4 +138,18 @@ export function findCommand(nameOrAlias: string): Command | undefined {
   return COMMANDS.find(
     cmd => cmd.name.toLowerCase() === lower || cmd.alias?.toLowerCase() === lower,
   )
+}
+
+/**
+ * Split palette input (without the leading /) into the command word and the
+ * argument string that follows it (e.g. "rename My title" → word "rename",
+ * args "My title"). Argument casing and inner whitespace are preserved.
+ */
+export function parseCommandInput(raw: string): { word: string, args: string } {
+  const trimmed = raw.trimStart()
+  const spaceIdx = trimmed.search(/\s/)
+  if (spaceIdx === -1) {
+    return { word: trimmed, args: '' }
+  }
+  return { word: trimmed.slice(0, spaceIdx), args: trimmed.slice(spaceIdx + 1).trim() }
 }
