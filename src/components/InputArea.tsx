@@ -84,6 +84,12 @@ export function InputArea({
   const handleKeyDown = (event: KeyEvent) => {
     const isEnterEvent = event.name === 'return' || event.name === 'linefeed'
 
+    // Skip history navigation when input is disabled (e.g., dialog/modal is open)
+    // This allows dialogs to handle up/down arrow keys for their own navigation
+    if (isDisabled) {
+      return
+    }
+
     // Up arrow: navigate to older history entry (only when input is single-line or cursor is at start)
     if (event.name === 'up' && onHistoryUp) {
       // Only navigate history if input is empty or single-line (no newlines)

@@ -117,15 +117,29 @@ jobs:
       - name: Download and setup CodeSignTool
         run: |
           curl -fsSL -o CodeSignTool.zip "https://www.ssl.com/download/codesigntool-for-linux-and-macos/"
-          unzip -o CodeSignTool.zip
+          # Create target directory and extract into it
+          mkdir -p CodeSignTool
+          unzip -o CodeSignTool.zip -d CodeSignTool
           rm CodeSignTool.zip
-          # Find the extracted directory (handles versioned directory names)
-          CST_DIR=$(find . -maxdepth 1 -type d -name "CodeSignTool*" | head -1)
-          if [ -z "$CST_DIR" ]; then
-            echo "Error: CodeSignTool directory not found after extraction"
+          # The zip may extract files directly or into a subdirectory - handle both cases
+          if [ -f "CodeSignTool/CodeSignTool.sh" ]; then
+            echo "Files extracted directly to CodeSignTool/"
+          else
+            # Look for a nested directory and move its contents up
+            NESTED_DIR=$(find CodeSignTool -maxdepth 1 -type d -name "CodeSignTool*" | head -1)
+            if [ -n "$NESTED_DIR" ] && [ "$NESTED_DIR" != "CodeSignTool" ]; then
+              echo "Found nested directory: $NESTED_DIR"
+              mv "$NESTED_DIR"/* CodeSignTool/
+              rmdir "$NESTED_DIR"
+            fi
+          fi
+          # Verify CodeSignTool.sh exists
+          if [ ! -f "CodeSignTool/CodeSignTool.sh" ]; then
+            echo "Error: CodeSignTool.sh not found after extraction"
+            echo "Contents of CodeSignTool directory:"
+            ls -la CodeSignTool/
             exit 1
           fi
-          mv "$CST_DIR" CodeSignTool
           chmod +x CodeSignTool/CodeSignTool.sh
 
       - name: Sign Windows binaries
