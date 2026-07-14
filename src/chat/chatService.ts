@@ -2,11 +2,14 @@ import type { StoredConversation } from '../config'
 import type { ActiveRun, AgentRunService, AgentSummary, RunEvent } from '../runs'
 import type {
   AccessTokenRevealEvent,
+  AuthCopDecision,
   CredentialRequestEvent,
   McpSetupEvent,
   OAuthRequestEvent,
   RunnerApprovalPendingEvent,
   RunnerApprovalResolvedEvent,
+  SpecialMessage,
+  SpecialMessageType,
 } from '../runs/runEvents'
 import type { PollHandle } from '../utils/poller'
 import { ConversationStore } from '../config'
@@ -16,6 +19,7 @@ import {
   OAUTH_POLL_MAX_ATTEMPTS,
 } from '../constants'
 import { logger } from '../logger'
+import { parseSpecialMessage } from '../runs/runEvents'
 import { copyToClipboard } from '../utils/clipboard'
 import { openUrl } from '../utils/openUrl'
 import { startPolling } from '../utils/poller'
@@ -28,6 +32,11 @@ export interface ChatMessage {
   timestamp: Date
   toolEvents?: RunEvent[]
   isStreaming?: boolean
+  /** Present when this is a guard-agent verdict, rendered as its own bubble. */
+  special?: {
+    type: SpecialMessageType
+    decision?: AuthCopDecision
+  }
 }
 
 /**
@@ -96,6 +105,8 @@ export class ChatService {
   private currentToolEvents: RunEvent[] = []
   /** Title for the active thread, derived from its first user message. */
   private currentTitle?: string
+  /** Backend uids of guard verdicts already shown, so live + reloaded copies don't double up. */
+  private seenSpecialMessageIds = new Set<string>()
   /** Authorize URLs for parked OAuth requests, keyed by requestId (opened on connect). */
   private oauthUrls = new Map<string, string>()
   /** Active OAuth status pollers, keyed by requestId; cleared on resolve/reset/dispose. */
@@ -223,6 +234,9 @@ export class ChatService {
           onRunnerApprovalResolved: (event) => {
             this.handleRunnerApprovalResolved(event)
           },
+          onSpecialMessage: (special) => {
+            this.addSpecialMessage(special)
+          },
           onCompleted: () => {
             this.finalizeStreamingMessage()
             this.updateState({ isTyping: false })
@@ -295,6 +309,7 @@ export class ChatService {
     this.streamingMessageId = undefined
     this.currentToolEvents = []
     this.currentTitle = undefined
+    this.seenSpecialMessageIds.clear()
     this.selectedAgentId = this.defaultAgentId
     const currentAgent = this.state.agents.find(a => a.uid === this.selectedAgentId)
     this.updateState({
@@ -360,6 +375,7 @@ export class ChatService {
     this.stopAllOAuthPolls()
     this.streamingMessageId = undefined
     this.currentToolEvents = []
+    this.seenSpecialMessageIds.clear()
     this.conversationUid = uid
 
     const entry = this.conversationStore.list().find(c => c.uid === uid)
@@ -383,12 +399,19 @@ export class ChatService {
       const rows = await this.runService.listConversationMessages(uid)
       const messages: ChatMessage[] = rows
         .filter(m => m.role === 'user' || m.role === 'assistant' || m.role === 'system')
-        .map(m => ({
-          id: crypto.randomUUID(),
-          role: m.role as ChatMessage['role'],
-          content: m.content,
-          timestamp: m.createdAt ? new Date(m.createdAt) : new Date(),
-        }))
+        .map((m) => {
+          const special = parseSpecialMessage(m.content, m.metadata, m.uid)
+          if (special?.messageId) {
+            this.seenSpecialMessageIds.add(special.messageId)
+          }
+          return {
+            id: crypto.randomUUID(),
+            role: m.role as ChatMessage['role'],
+            content: m.content,
+            timestamp: m.createdAt ? new Date(m.createdAt) : new Date(),
+            special: special ? { type: special.type, decision: special.decision } : undefined,
+          }
+        })
       this.updateState({ messages, isTyping: false })
     }
     catch (err) {
@@ -669,6 +692,30 @@ export class ChatService {
     const ok = await copyToClipboard(lastAssistant.content)
     this.addSystemMessage(ok ? 'Copied last reply to clipboard.' : 'Copy failed — no clipboard tool found.')
     return ok
+  }
+
+  /**
+   * Append a guard-agent verdict as its own bubble. Verdicts can arrive twice
+   * (live frame now, stored row on a later reload); the backend message uid
+   * dedupes within this session.
+   */
+  private addSpecialMessage(special: SpecialMessage): void {
+    if (special.messageId) {
+      if (this.seenSpecialMessageIds.has(special.messageId)) {
+        return
+      }
+      this.seenSpecialMessageIds.add(special.messageId)
+    }
+    const message: ChatMessage = {
+      id: crypto.randomUUID(),
+      role: 'assistant',
+      content: special.content,
+      timestamp: new Date(),
+      special: { type: special.type, decision: special.decision },
+    }
+    this.updateState({
+      messages: [...this.state.messages, message],
+    })
   }
 
   private addSystemMessage(content: string): void {

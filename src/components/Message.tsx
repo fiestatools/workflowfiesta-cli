@@ -3,6 +3,7 @@ import { TextAttributes } from '@opentui/core'
 import { SUBTLE_BG, themeColors } from '../theme'
 import { LoadingSpinner } from './LoadingSpinner'
 import { MarkdownText } from './MarkdownText'
+import { SpecialMessage } from './SpecialMessage'
 import { ToolActivity } from './ToolActivity'
 
 /** Props for a single message. */
@@ -19,6 +20,16 @@ function formatTimestamp(date: Date): string {
 
 /** Single chat message display. */
 export function Message({ message }: MessageProps) {
+  // Guard-agent verdicts render as their own bubble type.
+  if (message.special) {
+    return (
+      <SpecialMessage
+        message={message as MessageProps['message'] & { special: NonNullable<ChatMessage['special']> }}
+        timestamp={formatTimestamp(message.timestamp)}
+      />
+    )
+  }
+
   const isUser = message.role === 'user'
   const isSystem = message.role === 'system'
   const isAssistant = message.role === 'assistant'

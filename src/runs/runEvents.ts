@@ -12,6 +12,57 @@ export interface ChatMessageEvent {
   metadata: Record<string, unknown>
 }
 
+/**
+ * Post-thread verdicts from the platform's system guard agents. The backend
+ * stores them as ordinary assistant messages whose `metadata.type` carries the
+ * guard's identity, and broadcasts them as `chat:message` frames after the
+ * main run completes (see `temporal/activities/providers/agents/` in the
+ * backend). They must not be folded into the assistant's reply.
+ */
+export type SpecialMessageType = 'secret_safe' | 'quality_control' | 'auth_cop'
+
+/** Auth Cop's ruling, carried in the message's `metadata.decision`. */
+export type AuthCopDecision = 'approved' | 'need_confirmation' | 'declined'
+
+/** A guard-agent message extracted from a chat frame or a stored message row. */
+export interface SpecialMessage {
+  type: SpecialMessageType
+  content: string
+  /** Only present for `auth_cop` messages. */
+  decision?: AuthCopDecision
+  /** Backend message uid when known — used to dedupe live vs. reloaded copies. */
+  messageId?: string
+}
+
+const SPECIAL_MESSAGE_TYPES: readonly string[] = ['secret_safe', 'quality_control', 'auth_cop']
+const AUTH_COP_DECISIONS: readonly string[] = ['approved', 'need_confirmation', 'declined']
+
+/**
+ * Extract a guard-agent message from message content + metadata, or return
+ * `undefined` for ordinary messages. Accepts both live `chat:message` frames
+ * and rows from `GET /external/conversations/{id}/messages` (whose metadata
+ * may be `null`).
+ */
+export function parseSpecialMessage(
+  content: string,
+  metadata: Record<string, unknown> | null | undefined,
+  messageId?: string,
+): SpecialMessage | undefined {
+  const type = metadata?.type
+  if (typeof type !== 'string' || !SPECIAL_MESSAGE_TYPES.includes(type)) {
+    return undefined
+  }
+  const decision = metadata?.decision
+  return {
+    type: type as SpecialMessageType,
+    content,
+    decision: typeof decision === 'string' && AUTH_COP_DECISIONS.includes(decision)
+      ? decision as AuthCopDecision
+      : undefined,
+    messageId,
+  }
+}
+
 /** Terminal event for a run (both success and failure carry this shape). */
 export interface RunCompletedEvent {
   conversationId?: string

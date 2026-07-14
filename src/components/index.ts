@@ -54,21 +54,23 @@ export { Message } from './Message'
 export type { MessageProps } from './Message'
 export { MessageList } from './MessageList'
 export type { MessageListProps } from './MessageList'
-
 export { OAuthRequestPrompt } from './OAuthRequestPrompt'
 export { PasswordInput } from './PasswordInput'
+
 export type { PasswordInputProps } from './PasswordInput'
 // Interactive request forms
 export { RequestOverlay } from './RequestOverlay'
 export type { RequestOverlayProps } from './RequestOverlay'
 // Settings
 export { SettingsPanel } from './SettingsPanel'
-
 export type { SettingsPanelProps } from './SettingsPanel'
-
 // Side panel
 export { SIDE_PANEL_WIDTH, SidePanel } from './SidePanel'
+
 export type { SidePanelProps } from './SidePanel'
+
+export { SpecialMessage } from './SpecialMessage'
+export type { SpecialMessageProps } from './SpecialMessage'
 export { StatusBar } from './StatusBar'
 export type { StatusBarProps } from './StatusBar'
 export { StatusDialog } from './StatusDialog'
