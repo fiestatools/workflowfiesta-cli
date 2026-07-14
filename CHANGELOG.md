@@ -1,5 +1,11 @@
 # @workflowfiesta/cli
 
+## 0.2.1
+
+### Patch Changes
+
+- [#40](https://github.com/fiestatools/workflowfiesta-cli/pull/40) [`01945dd`](https://github.com/fiestatools/workflowfiesta-cli/commit/01945dd9daad8250626c59696fe7b801bc21b66c) Thanks [@awaitimport](https://github.com/awaitimport)! - Fix modal/dialog focus trapping where up/down arrow keys would cycle through prompt history instead of navigating within the dialog. Also fix Windows CI CodeSignTool extraction to handle zip files that extract contents directly rather than into a subdirectory.
+
 ## 0.2.0
 
 ### Minor Changes
