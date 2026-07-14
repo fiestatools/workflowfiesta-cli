@@ -1,5 +1,15 @@
 # @workflowfiesta/cli
 
+## 0.2.0
+
+### Minor Changes
+
+- [#38](https://github.com/fiestatools/workflowfiesta-cli/pull/38) [`c79e419`](https://github.com/fiestatools/workflowfiesta-cli/commit/c79e4197307016a045c661d9b69420ce1514fc8e) Thanks [@awaitimport](https://github.com/awaitimport)! - Add `/status` command, `Ctrl+Y` copy shortcut, and message timestamps
+
+  - Add `/status` command to show connection status, current agent, and conversation info
+  - Add `Ctrl+Y` keyboard shortcut to quickly copy the last assistant reply to clipboard
+  - Display timestamps (HH:MM) next to each message in the chat view
+
 ## 0.1.1
 
 ### Patch Changes
