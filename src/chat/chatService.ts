@@ -314,6 +314,33 @@ export class ChatService {
     return this.conversationStore.list()
   }
 
+  /** Rename the active conversation (the `/rename <title>` command). */
+  renameCurrentConversation(title: string): void {
+    const trimmed = title.trim()
+    if (!trimmed) {
+      this.addSystemMessage('Usage: /rename <new title>')
+      return
+    }
+    if (!this.conversationUid) {
+      this.addSystemMessage('No conversation to rename yet — send a message first.')
+      return
+    }
+    this.renameConversation(this.conversationUid, trimmed)
+    this.addSystemMessage(`Renamed conversation to "${trimmed}".`)
+  }
+
+  /** Rename a conversation in local history (the backend thread is untouched). */
+  renameConversation(uid: string, title: string): void {
+    const trimmed = title.trim()
+    if (!trimmed) {
+      return
+    }
+    this.conversationStore.rename(uid, trimmed)
+    if (this.conversationUid === uid) {
+      this.currentTitle = trimmed
+    }
+  }
+
   /** Forget a conversation from local history (the backend thread is untouched). */
   forgetConversation(uid: string): void {
     this.conversationStore.remove(uid)

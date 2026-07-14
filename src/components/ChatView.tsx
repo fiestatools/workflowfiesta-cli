@@ -79,12 +79,15 @@ export function ChatView({
   // Show command palette when input starts with / (but not when an overlay is open)
   const showCommandPalette = input.startsWith('/') && !anyOverlay
 
-  const handleCommandExecute = (command: Command) => {
+  const handleCommandExecute = (command: Command, args: string) => {
     // Clear the input after command execution
     onInputChange('')
 
     // Execute the command
     switch (command.name) {
+      case 'rename':
+        chatService.renameCurrentConversation(args)
+        break
       case 'new':
         onNewChat?.()
         break
@@ -197,6 +200,7 @@ export function ChatView({
             onSelect={uid => void chatService.switchConversation(uid)}
             onNew={() => onNewChat?.()}
             onForget={uid => chatService.forgetConversation(uid)}
+            onRename={(uid, title) => chatService.renameConversation(uid, title)}
             onClose={onCloseOverlay}
           />
         )}

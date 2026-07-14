@@ -47,6 +47,7 @@ Press `/` to open the command palette:
 |---------|-------------|
 | `/new` | Start a new conversation |
 | `/agent` | Switch to a different agent |
+| `/rename <new title>` | Rename the current conversation |
 | `/history` | Browse past conversations |
 | `/settings` | Open settings panel |
 | `/copy` | Copy the last reply |
@@ -58,7 +59,14 @@ Run `/agent` to switch agents. The picker shows your org's available agents with
 
 ### Conversation History
 
-Run `/history` to browse and reopen previous conversations. Conversations are stored locally and synced with the backend.
+Run `/history` to browse and manage previous conversations. Conversations are stored locally and synced with the backend.
+
+| Key | Action |
+|-----|--------|
+| `Enter` | Reopen the selected conversation |
+| `r` | Rename the selected conversation |
+| `Space` | Mark/unmark for bulk delete |
+| `d` | Delete the selected (or marked) conversations, with confirmation |
 
 ### Interactive Tool Requests
 
