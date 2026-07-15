@@ -1,5 +1,16 @@
 # @workflowfiesta/cli
 
+## 0.4.0
+
+### Minor Changes
+
+- [#48](https://github.com/fiestatools/workflowfiesta-cli/pull/48) [`72b4584`](https://github.com/fiestatools/workflowfiesta-cli/commit/72b458473ca292a3499eafb6b17ce93c59802f94) Thanks [@DevAdedeji](https://github.com/DevAdedeji)! - Render guard-agent verdicts (Auth Cop, Secret Safe, Helping Hand) as distinct bubbles
+
+  - Auth Cop security reviews show with their decision badge (approved / awaiting confirmation / declined), a waiting notice when the agent needs your reply, and an escalation hint when declined
+  - Secret Safe redaction notices and Helping Hand suggestions render with their own headers and accent colors, matching the web app
+  - Previously these messages were appended into the assistant's reply text (or lost entirely once the run finished); the run stream now stays open after completion so post-run verdicts arrive, and they are excluded from reply reconciliation
+  - Reopened conversations render stored guard verdicts the same way
+
 ## 0.3.1
 
 ### Patch Changes
