@@ -100,6 +100,7 @@ export function ChatInterface({ services }: ChatInterfaceProps) {
       sidePanelVisible={sidePanelVisible}
       settingsVisible={settingsVisible}
       authService={services.auth}
+      settingsService={services.settingsService}
       onToggleSidePanel={toggleSidePanel}
       onNewChat={newChat}
       onOpenSettings={openSettings}

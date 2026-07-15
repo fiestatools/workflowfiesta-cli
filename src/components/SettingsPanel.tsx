@@ -1,11 +1,14 @@
 import type { AuthService } from '../auth'
 import type { CliConfig } from '../config'
+import type { AgentSummary } from '../runs'
+import type { Identity, SettingsService } from '../settings'
 import { TextAttributes } from '@opentui/core'
 import { useKeyboard } from '@opentui/react'
 import { useCallback, useEffect, useState } from 'react'
 import { getConfigManager } from '../config'
 import { BRAND_ORANGE, SUBTLE_BG, themeColors } from '../theme'
 import { openUrl } from '../utils/openUrl'
+import { AgentPicker } from './AgentPicker'
 
 /** Documentation URL */
 const DOCS_URL = 'https://testfiesta.gitbook.io/workflowfiesta'
@@ -14,17 +17,21 @@ const DOCS_URL = 'https://testfiesta.gitbook.io/workflowfiesta'
 const DEFAULTS = {
   apiBaseUrl: 'https://api.workflowfiesta.com',
   requestTimeoutMs: 30000,
-  agentId: '(uses org default)',
 }
 
 /** Props for the SettingsPanel component. */
 export interface SettingsPanelProps {
   authService: AuthService
+  settingsService: SettingsService
+  /** The org's agents, for the default-agent picker. */
+  agents: AgentSummary[]
+  /** Called after the local default-agent pin changes, so the run service can re-resolve it. */
+  onDefaultAgentChanged?: () => void
   onClose: () => void
 }
 
-/** Available setting fields. */
-type SettingField = 'apiBaseUrl' | 'agentId' | 'requestTimeoutMs'
+/** Editable free-text setting fields. */
+type SettingField = 'apiBaseUrl' | 'requestTimeoutMs'
 
 interface SettingFieldConfig {
   key: SettingField
@@ -34,12 +41,23 @@ interface SettingFieldConfig {
 
 const SETTING_FIELDS: SettingFieldConfig[] = [
   { key: 'apiBaseUrl', label: 'API Base URL', defaultValue: DEFAULTS.apiBaseUrl },
-  { key: 'agentId', label: 'Agent ID', defaultValue: DEFAULTS.agentId },
   { key: 'requestTimeoutMs', label: 'Timeout (ms)', defaultValue: String(DEFAULTS.requestTimeoutMs) },
 ]
 
+/** Format an ISO expiry timestamp as a short date, or a fallback label. */
+function formatExpiry(iso: string): string {
+  if (!iso)
+    return 'unknown'
+  const date = new Date(iso)
+  if (Number.isNaN(date.getTime()))
+    return 'unknown'
+  const expired = date.getTime() < Date.now()
+  const label = date.toISOString().slice(0, 10)
+  return expired ? `${label} (expired)` : label
+}
+
 /** Settings panel component - renders as an overlay dialog. */
-export function SettingsPanel({ authService, onClose }: SettingsPanelProps) {
+export function SettingsPanel({ authService, settingsService, agents, onDefaultAgentChanged, onClose }: SettingsPanelProps) {
   const [config, setConfig] = useState<CliConfig>({})
   const [apiUrlOverride, setApiUrlOverride] = useState<string | undefined>()
   const [editingField, setEditingField] = useState<SettingField | null>(null)
@@ -47,12 +65,28 @@ export function SettingsPanel({ authService, onClose }: SettingsPanelProps) {
   const [selectedIndex, setSelectedIndex] = useState(0)
   const [isAuthenticated, setIsAuthenticated] = useState(false)
   const [accountFingerprint, setAccountFingerprint] = useState<string | undefined>()
+  const [identity, setIdentity] = useState<Identity | null>(null)
+  const [agentPickerOpen, setAgentPickerOpen] = useState(false)
   const [message, setMessage] = useState<{ type: 'success' | 'error', text: string } | null>(null)
 
-  // Total selectable items: settings + docs + sign out (if authenticated)
-  const totalItems = SETTING_FIELDS.length + 1 + (isAuthenticated ? 1 : 0)
-  const docsIndex = SETTING_FIELDS.length
-  const signOutIndex = SETTING_FIELDS.length + 1
+  // Row layout: editable fields, then the default-agent row, docs, and (when
+  // signed in) sign out.
+  const agentRowIndex = SETTING_FIELDS.length
+  const docsIndex = agentRowIndex + 1
+  const signOutIndex = docsIndex + 1
+  const totalItems = signOutIndex + (isAuthenticated ? 1 : 0)
+
+  /** The locally pinned default agent, if any. */
+  const pinnedAgentId = config.agentId?.trim() || undefined
+  const pinnedAgent = agents.find(a => a.uid === pinnedAgentId)
+  const accountDefaultAgent = identity?.defaultAgentId
+    ? agents.find(a => a.uid === identity.defaultAgentId)
+    : undefined
+  const agentRowValue = pinnedAgent
+    ? pinnedAgent.name
+    : accountDefaultAgent
+      ? `Account default (${accountDefaultAgent.name})`
+      : 'Account default'
 
   /** Get the display value for a setting field. */
   const getDisplayValue = (field: SettingFieldConfig): { value: string, isDefault: boolean, source?: string } => {
@@ -80,7 +114,8 @@ export function SettingsPanel({ authService, onClose }: SettingsPanelProps) {
     void authService.isAuthenticated().then(setIsAuthenticated)
     void authService.getAccountFingerprint().then(setAccountFingerprint)
     void authService.getApiUrlOverride().then(setApiUrlOverride)
-  }, [authService])
+    void settingsService.getIdentity().then(setIdentity).catch(() => setIdentity(null))
+  }, [authService, settingsService])
 
   // Clear message after 2 seconds
   useEffect(() => {
@@ -123,12 +158,34 @@ export function SettingsPanel({ authService, onClose }: SettingsPanelProps) {
       return
     }
 
-    configManager.setConfig({ [editingField]: valueToSave })
+    // Only requestTimeoutMs remains after the apiBaseUrl branch returns.
+    configManager.setConfig({ requestTimeoutMs: typeof valueToSave === 'number' ? valueToSave : undefined })
     setConfig(configManager.getConfig())
     setEditingField(null)
     setEditValue('')
     setMessage({ type: 'success', text: 'Setting saved!' })
   }, [editingField, editValue, authService])
+
+  /** Pin a specific agent as this CLI's default. */
+  const handlePinAgent = useCallback((agentId: string) => {
+    const configManager = getConfigManager()
+    configManager.setConfig({ agentId })
+    setConfig(configManager.getConfig())
+    setAgentPickerOpen(false)
+    onDefaultAgentChanged?.()
+    const name = agents.find(a => a.uid === agentId)?.name ?? 'agent'
+    setMessage({ type: 'success', text: `Default agent set to ${name}` })
+  }, [agents, onDefaultAgentChanged])
+
+  /** Clear the local pin so the CLI follows the account default. */
+  const handleUseAccountDefault = useCallback(() => {
+    const configManager = getConfigManager()
+    configManager.setConfig({ agentId: undefined })
+    setConfig(configManager.getConfig())
+    setAgentPickerOpen(false)
+    onDefaultAgentChanged?.()
+    setMessage({ type: 'success', text: 'Using account default agent' })
+  }, [onDefaultAgentChanged])
 
   const handleSignOut = useCallback(async () => {
     await authService.signOut()
@@ -147,8 +204,12 @@ export function SettingsPanel({ authService, onClose }: SettingsPanelProps) {
     }
   }, [])
 
-  // Keyboard navigation
+  // Keyboard navigation. Suppressed while the nested agent picker owns the
+  // keyboard (it has its own handler).
   useKeyboard((key) => {
+    if (agentPickerOpen)
+      return
+
     // Close on Escape
     if (key.name === 'escape') {
       if (editingField) {
@@ -188,6 +249,9 @@ export function SettingsPanel({ authService, onClose }: SettingsPanelProps) {
         setEditingField(field.key)
         setEditValue(String(config[field.key] ?? ''))
       }
+      else if (selectedIndex === agentRowIndex) {
+        setAgentPickerOpen(true)
+      }
       else if (selectedIndex === docsIndex) {
         void handleOpenDocs()
       }
@@ -196,6 +260,20 @@ export function SettingsPanel({ authService, onClose }: SettingsPanelProps) {
       }
     }
   })
+
+  if (agentPickerOpen) {
+    return (
+      <AgentPicker
+        title="Default agent"
+        agents={agents}
+        currentAgentId={pinnedAgentId}
+        onSelect={handlePinAgent}
+        onUseDefault={handleUseAccountDefault}
+        defaultAgentName={accountDefaultAgent?.name}
+        onClose={() => setAgentPickerOpen(false)}
+      />
+    )
+  }
 
   const hint = editingField
     ? 'Enter to save, Esc to cancel'
@@ -226,8 +304,8 @@ export function SettingsPanel({ authService, onClose }: SettingsPanelProps) {
       </text>
       <text style={{ height: 1 }} />
 
-      {/* Auth Status */}
-      <text fg={themeColors.textMuted} attributes={TextAttributes.DIM}> Authentication</text>
+      {/* Account */}
+      <text fg={themeColors.textMuted} attributes={TextAttributes.DIM}> Account</text>
       <box flexDirection="row" paddingLeft={1}>
         <text>
           <span fg={themeColors.textMuted}>Status: </span>
@@ -244,6 +322,51 @@ export function SettingsPanel({ authService, onClose }: SettingsPanelProps) {
           )}
         </text>
       </box>
+      {identity && (
+        <>
+          {identity.userEmail && (
+            <box flexDirection="row" paddingLeft={1}>
+              <text>
+                <span fg={themeColors.textMuted}>User: </span>
+                <span fg={themeColors.text}>{identity.userEmail}</span>
+                {identity.userName && (
+                  <span fg={themeColors.textSubtle}>
+                    {' '}
+                    (
+                    {identity.userName}
+                    )
+                  </span>
+                )}
+              </text>
+            </box>
+          )}
+          <box flexDirection="row" paddingLeft={1}>
+            <text>
+              <span fg={themeColors.textMuted}>Org: </span>
+              <span fg={themeColors.text}>{identity.orgName ?? identity.orgId}</span>
+              {/* Fall back to the raw org id on older servers that don't send a name. */}
+              {identity.orgName && (
+                <span fg={themeColors.textSubtle}>
+                  {' '}
+                  (
+                  {identity.orgId}
+                  )
+                </span>
+              )}
+            </text>
+          </box>
+          <box flexDirection="row" paddingLeft={1}>
+            <text>
+              <span fg={themeColors.textMuted}>Token: </span>
+              <span fg={themeColors.text}>{identity.tokenName || 'unnamed'}</span>
+              <span fg={themeColors.textSubtle}>
+                {' — expires '}
+                {formatExpiry(identity.tokenExpiresAt)}
+              </span>
+            </text>
+          </box>
+        </>
+      )}
       <text style={{ height: 1 }} />
 
       {/* Settings List */}
@@ -289,6 +412,22 @@ export function SettingsPanel({ authService, onClose }: SettingsPanelProps) {
           </box>
         )
       })}
+
+      {/* Default agent (opens a picker) */}
+      <box flexDirection="row" paddingLeft={1}>
+        <text style={{ width: 2 }}>
+          <span fg={selectedIndex === agentRowIndex ? themeColors.primary : themeColors.text}>
+            {selectedIndex === agentRowIndex && !editingField ? '▸' : ' '}
+          </span>
+        </text>
+        <text style={{ width: 18 }}>
+          <span fg={selectedIndex === agentRowIndex ? themeColors.primary : themeColors.text}>Default agent:</span>
+        </text>
+        <text>
+          <span fg={themeColors.text}>{agentRowValue}</span>
+          {!pinnedAgent && <span fg={themeColors.textSubtle}> (account)</span>}
+        </text>
+      </box>
 
       {/* Documentation link */}
       <box flexDirection="row" paddingLeft={1} marginTop={1}>
