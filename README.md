@@ -55,7 +55,15 @@ Press `/` to open the command palette:
 
 ### Agent Picker
 
-Run `/agent` to switch agents. The picker shows your org's available agents with descriptions.
+Run `/agent` to switch agents for the current conversation. The picker shows your org's available agents with descriptions.
+
+### Settings
+
+Run `/settings` (or `Ctrl+S`) to open the settings panel. It shows:
+
+- **Account** — who you're signed in as, your organization, and the access token in use with its expiry
+- **Configuration** — API base URL and request timeout
+- **Default agent** — the agent new conversations start with. Choose a specific agent to pin it for this CLI, or "Use account default" to follow whatever your account sets in the web app. This is separate from `/agent`, which only switches the current conversation.
 
 ### Conversation History
 

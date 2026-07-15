@@ -1,6 +1,7 @@
 import type { AuthService } from '../auth'
 import type { ChatService, ChatState } from '../chat'
 import type { Command } from '../commands'
+import type { SettingsService } from '../settings'
 import { AccessTokenRevealOverlay } from './AccessTokenRevealOverlay'
 import { AgentPicker } from './AgentPicker'
 import { CommandPalette } from './CommandPalette'
@@ -33,6 +34,7 @@ export interface ChatViewProps {
   sidePanelVisible?: boolean
   settingsVisible?: boolean
   authService?: AuthService
+  settingsService?: SettingsService
   onToggleSidePanel?: () => void
   onNewChat?: () => void
   onOpenSettings?: () => void
@@ -62,6 +64,7 @@ export function ChatView({
   sidePanelVisible = false,
   settingsVisible = false,
   authService,
+  settingsService,
   onToggleSidePanel,
   onNewChat,
   onOpenSettings,
@@ -150,9 +153,12 @@ export function ChatView({
         />
 
         {/* Settings panel overlay */}
-        {settingsVisible && authService && (
+        {settingsVisible && authService && settingsService && (
           <SettingsPanel
             authService={authService}
+            settingsService={settingsService}
+            agents={state.agents}
+            onDefaultAgentChanged={() => void chatService.refreshDefaultAgent()}
             onClose={onCloseSettings ?? (() => {})}
           />
         )}
