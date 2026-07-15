@@ -75,6 +75,13 @@ The CLI handles mid-run agent requests inline:
 - **OAuth** - Browser-based authorization flow
 - **MCP servers** - Server configuration and connection
 
+### Platform Guard Notices
+
+Verdicts from the platform's guard agents render as distinct bubbles, matching the web app:
+- **Auth Cop** - Security reviews with their decision (approved / awaiting confirmation / declined)
+- **Secret Safe** - Redaction notices when secrets are detected
+- **Helping Hand** - Suggestions when a run needs a nudge
+
 ## Keyboard Shortcuts
 
 | Shortcut | Action |

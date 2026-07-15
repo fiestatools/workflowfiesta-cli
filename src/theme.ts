@@ -39,6 +39,11 @@ export const themeColors = {
   system: '#FFD700',
   tool: '#DA70D6',
 
+  // System guard agents (aligned with the web bubble palette)
+  authCop: '#F59E0B',
+  secretSafe: '#A78BFA',
+  helpingHand: '#14B8A6',
+
   // Backgrounds
   bg: '#000000',
   bgSubtle: '#1c1c1e',

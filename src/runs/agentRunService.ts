@@ -7,9 +7,11 @@ import type {
   RunEvent,
   RunnerApprovalPendingEvent,
   RunnerApprovalResolvedEvent,
+  SpecialMessage,
 } from './runEvents'
 import { ApiError } from '../api/errors'
 import { getConfiguredAgentId } from '../config/settings'
+import { parseSpecialMessage } from './runEvents'
 import { RunStream } from './runStream'
 
 /** Response from `POST /external/agents/{id}/runs`. */
@@ -28,9 +30,11 @@ export interface AgentSummary {
 }
 
 /** Minimal message shape from `GET /external/conversations/{id}/messages`. */
-interface MessageSummary {
+export interface MessageSummary {
+  uid?: string
   role: string
   content: string
+  metadata?: Record<string, unknown> | null
   createdAt?: string
 }
 
@@ -52,6 +56,8 @@ export interface AgentRunHandlers {
   onRunnerApprovalPending?: (event: RunnerApprovalPendingEvent) => void
   /** A parked runner job's approval was resolved. */
   onRunnerApprovalResolved?: (event: RunnerApprovalResolvedEvent) => void
+  /** A guard-agent verdict (Auth Cop / Secret Safe / Helping Hand) arrived. */
+  onSpecialMessage?: (message: SpecialMessage) => void
   /** The run finished successfully. */
   onCompleted: () => void
   /** The run failed, or the stream errored. */
@@ -99,7 +105,7 @@ export class AgentRunService {
   async listConversationMessages(
     conversationUid: string,
     limit = 100,
-  ): Promise<{ role: string, content: string, createdAt?: string }[]> {
+  ): Promise<MessageSummary[]> {
     return this.api.get<MessageSummary[]>(`/external/conversations/${conversationUid}/messages`, {
       query: { limit },
     })
@@ -230,9 +236,13 @@ export class AgentRunService {
       fn()
     }
 
+    // Deliberately leaves the stream open: the platform's guard agents
+    // (Auth Cop / Secret Safe / Helping Hand) run after the main run completes
+    // and broadcast their verdicts as late `chat:message` frames on the same
+    // socket. The stream is closed on failure/error and by `dispose()` when
+    // the next run starts or the conversation changes.
     const finalizeRun = (): void => {
       finishOnce(() => {
-        stream.close()
         void this.finalize(run.conversationUid, streamedAny, handlers)
       })
     }
@@ -257,6 +267,13 @@ export class AgentRunService {
           }
         },
         onChatMessage: (event) => {
+          // Guard verdicts are broadcast with role 'assistant' but must render
+          // as their own bubbles, never be folded into the reply text.
+          const special = parseSpecialMessage(event.content, event.metadata, event.id)
+          if (special) {
+            handlers.onSpecialMessage?.(special)
+            return
+          }
           if (event.role === 'assistant' && event.content) {
             streamedAny = true
             handlers.onAssistantDelta(event.content)
@@ -289,8 +306,9 @@ export class AgentRunService {
           finalizeRun()
         },
         onFailed: () => {
+          // Stays open like the success path: Helping Hand coaches on failed
+          // runs, and its verdict arrives after this frame.
           finishOnce(() => {
-            stream.close()
             handlers.onError('The agent run failed.')
           })
         },
@@ -330,7 +348,10 @@ export class AgentRunService {
           `/external/conversations/${conversationUid}/messages`,
           { query: { limit: 5 } },
         )
-        const lastAssistant = [...messages].reverse().find(message => message.role === 'assistant')
+        // Guard verdicts are stored with role 'assistant' too; skip them so a
+        // late Auth Cop/Secret Safe message is never mistaken for the reply.
+        const lastAssistant = [...messages].reverse().find(message =>
+          message.role === 'assistant' && !parseSpecialMessage(message.content, message.metadata))
         if (lastAssistant?.content) {
           handlers.onAssistantDelta(lastAssistant.content)
         }
