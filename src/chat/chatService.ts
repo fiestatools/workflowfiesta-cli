@@ -292,6 +292,20 @@ export class ChatService {
     this.addSystemMessage('Stopped.')
   }
 
+  /**
+   * Re-resolve the default agent after the local pin changed in settings. When
+   * idle (no active conversation), also updates the agent the next new chat
+   * will start with, so a changed default takes effect without a restart.
+   */
+  async refreshDefaultAgent(): Promise<void> {
+    this.defaultAgentId = await this.runService.resolveDefaultAgentId()
+    if (!this.conversationUid) {
+      this.selectedAgentId = this.defaultAgentId
+      const currentAgent = this.state.agents.find(a => a.uid === this.defaultAgentId)
+      this.updateState({ currentAgent })
+    }
+  }
+
   /** Select a different agent. */
   selectAgent(agentId: string): void {
     this.selectedAgentId = agentId

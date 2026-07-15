@@ -4,6 +4,7 @@ import { ChatService } from './chat'
 import { createGetApiBaseUrl, createGetWsBaseUrl, getRequestTimeoutMs } from './config'
 import { logger } from './logger'
 import { AgentRunService } from './runs'
+import { SettingsService } from './settings'
 
 /**
  * Application services initialized on startup.
@@ -17,6 +18,8 @@ export interface Services {
   api: ApiClient
   /** Agent run service. */
   runService: AgentRunService
+  /** Settings/identity service. */
+  settingsService: SettingsService
   /** Chat service. */
   chatService: ChatService
 }
@@ -63,10 +66,13 @@ export async function initializeServices(): Promise<Services> {
     createGetApiBaseUrl(auth),
   )
 
+  // Create settings service
+  const settingsService = new SettingsService(api)
+
   // Create chat service
   const chatService = new ChatService(runService)
 
   logger.info('Services initialized successfully')
 
-  return { credentialStore, auth, api, runService, chatService }
+  return { credentialStore, auth, api, runService, settingsService, chatService }
 }
