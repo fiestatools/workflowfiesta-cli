@@ -1,13 +1,9 @@
-/**
- * Installation detection, version management, and upgrade operations.
- */
-
 export type { AutoUpgradeOptions, UpdateInfo } from './autoUpgrade'
-// Auto-upgrade
+
 export {
   runAutoUpgradeCheck,
 } from './autoUpgrade'
-// Constants
+
 export {
   AUTO_UPGRADE_CHECK_DELAY_MS,
   DEFAULT_INSTALL_SCRIPT_URL,
@@ -17,25 +13,38 @@ export {
   HOMEBREW_FORMULA_NAMES,
   UPGRADE_COMMAND_TIMEOUT_MS,
 } from './constants'
-// Types
+
 export type { DetectionResult, InstallationMethod } from './detection'
 
-// Detection
 export {
   detectInstallationMethod,
   method,
 } from './detection'
 
-// Errors
 export {
+  UninstallFailedError,
   UpgradeFailedError,
   VersionFetchError,
   VersionVerificationError,
 } from './errors'
 
+export type { ShellConfigFile, ShellType, UninstallTargets } from './targets'
+
+export {
+  getUninstallTargets,
+  getWorkflowfiestaDir,
+  SHELL_CONFIG_PATTERNS,
+} from './targets'
+
+export type { UninstallOptions, UninstallResult } from './uninstall'
+
+export {
+  uninstall,
+  uninstallCommand,
+} from './uninstall'
+
 export type { UpgradeOptions, UpgradeResult } from './upgrade'
 
-// Upgrade
 export {
   upgrade,
   upgradeCommand,
@@ -43,7 +52,6 @@ export {
 
 export type { ReleaseType } from './versions'
 
-// Versions
 export {
   compareVersions,
   fetchLatestVersion,
