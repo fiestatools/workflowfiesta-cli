@@ -1,22 +1,19 @@
 import type { ChatState } from '../chat'
 import { TextAttributes } from '@opentui/core'
 import { BRAND_ORANGE, SUBTLE_BG, themeColors } from '../theme'
+import { getConnectionStatus } from '../utils/connectionStatus'
 import { truncateText } from '../utils/truncateText'
 import { Divider } from './Divider'
 
-/** Width of the side panel in characters. */
 export const SIDE_PANEL_WIDTH = 32
 
-/** CLI version - uses build-time constant or falls back to dev */
 const CLI_VERSION = typeof WF_VERSION !== 'undefined' ? `v${WF_VERSION}` : 'dev'
 
-/** Props for the SidePanel component. */
 export interface SidePanelProps {
   state: ChatState
   isVisible: boolean
 }
 
-/** Side panel component showing session/context info. */
 export function SidePanel({ state, isVisible }: SidePanelProps) {
   if (!isVisible) {
     return null
@@ -25,20 +22,13 @@ export function SidePanel({ state, isVisible }: SidePanelProps) {
   const userMessageCount = state.messages.filter(m => m.role === 'user').length
   const assistantMessageCount = state.messages.filter(m => m.role === 'assistant').length
 
-  // Derive conversation title from first user message or use default
   const firstUserMessage = state.messages.find(m => m.role === 'user')
   const conversationTitle = firstUserMessage
     ? truncateText(firstUserMessage.content, 26)
     : 'New Conversation'
 
-  // Connection status
-  const connectionStatus = state.isConnecting
-    ? { text: 'connecting', color: themeColors.warning }
-    : state.isConnected
-      ? { text: 'connected', color: themeColors.primary }
-      : { text: 'disconnected', color: themeColors.textMuted }
+  const connectionStatus = getConnectionStatus(state)
 
-  // Agent status
   const agentName = state.currentAgent?.name ?? 'No agent'
   const agentStatus = state.isTyping ? 'working...' : 'ready'
   const agentStatusColor = state.isTyping ? themeColors.warning : themeColors.primary

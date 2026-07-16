@@ -1,8 +1,9 @@
 import type { AgentSummary } from '../runs'
 import { TextAttributes } from '@opentui/core'
-import { useKeyboard } from '@opentui/react'
-import { useState } from 'react'
-import { BRAND_ORANGE, SUBTLE_BG, themeColors } from '../theme'
+import { useDialogKeyboard } from '../hooks'
+import { themeColors } from '../theme'
+import { OverlayContainer } from './OverlayContainer'
+import { SelectableRow } from './SelectableRow'
 
 /** Props for the agent picker overlay. */
 export interface AgentPickerProps {
@@ -45,63 +46,33 @@ export function AgentPicker({
   // With no pin (using account default), highlight the default row; otherwise
   // highlight the pinned agent.
   const initial = agentIndex >= 0 ? agentIndex + offset : 0
-  const [selectedIndex, setSelectedIndex] = useState(initial)
 
-  useKeyboard((key) => {
-    if (key.name === 'escape') {
-      onClose()
-      return
-    }
-    if (rowCount === 0)
-      return
-
-    if (key.name === 'up' || key.name === 'k') {
-      setSelectedIndex(prev => (prev > 0 ? prev - 1 : rowCount - 1))
-    }
-    else if (key.name === 'down' || key.name === 'j' || key.name === 'tab') {
-      setSelectedIndex(prev => (prev < rowCount - 1 ? prev + 1 : 0))
-    }
-    else if (key.name === 'return') {
-      if (hasDefaultRow && selectedIndex === 0) {
+  const { selectedIndex } = useDialogKeyboard({
+    itemCount: rowCount,
+    onClose,
+    onSelect: (index) => {
+      if (hasDefaultRow && index === 0) {
         onUseDefault?.()
         onClose()
         return
       }
-      const agent = agents[selectedIndex - offset]
+      const agent = agents[index - offset]
       if (agent) {
         onSelect(agent.uid)
         onClose()
       }
-    }
+    },
+    initialIndex: initial,
   })
 
   // The default row counts as "current" only when nothing is pinned.
   const defaultRowIsCurrent = hasDefaultRow && !currentAgentId
 
   return (
-    <box
-      style={{
-        position: 'absolute',
-        bottom: 4,
-        left: 0,
-        width: '100%',
-        zIndex: 100,
-        backgroundColor: SUBTLE_BG,
-        border: true,
-        borderColor: BRAND_ORANGE,
-        flexDirection: 'column',
-        padding: 1,
-      }}
+    <OverlayContainer
+      title={title}
+      helpText="↑↓ to move · Enter to select · Esc to close"
     >
-      <text>
-        <span fg={themeColors.primary} attributes={TextAttributes.BOLD}>
-          {' '}
-          {title}
-        </span>
-      </text>
-      <text fg={themeColors.textSubtle}> ↑↓ to move · Enter to select · Esc to close</text>
-      <text style={{ height: 1 }} />
-
       {hasDefaultRow && (
         <box flexDirection="row" paddingLeft={1}>
           <text style={{ width: 2 }}>
@@ -133,25 +104,16 @@ export function AgentPicker({
               const isSelected = rowIndex === selectedIndex
               const isCurrent = agent.uid === currentAgentId
               return (
-                <box key={agent.uid} flexDirection="row" paddingLeft={1}>
-                  <text style={{ width: 2 }}>
-                    <span fg={isSelected ? themeColors.primary : themeColors.text}>{isSelected ? '▸' : ' '}</span>
-                  </text>
-                  <box flexDirection="column" flexGrow={1}>
-                    <text>
-                      <span fg={isSelected ? themeColors.primary : themeColors.text} attributes={isSelected ? TextAttributes.BOLD : undefined}>
-                        {agent.name}
-                      </span>
-                      {isCurrent && <span fg={themeColors.success}> (current)</span>}
-                    </text>
-                    {agent.description && (
-                      <text fg={themeColors.textSubtle} attributes={TextAttributes.DIM}>{agent.description}</text>
-                    )}
-                  </box>
-                </box>
+                <SelectableRow
+                  key={agent.uid}
+                  isSelected={isSelected}
+                  label={agent.name}
+                  sublabel={agent.description}
+                  badge={isCurrent ? '(current)' : undefined}
+                />
               )
             })
           )}
-    </box>
+    </OverlayContainer>
   )
 }

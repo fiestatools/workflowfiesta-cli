@@ -1,5 +1,6 @@
 // Hooks
-export { useChatState, useInput } from '../hooks'
+export { useChatState, useDialogKeyboard, useInput } from '../hooks'
+export type { DialogKeyboardOptions, DialogKeyboardResult } from '../hooks'
 export { AccessTokenCard } from './AccessTokenCard'
 
 export type { AccessTokenCardProps } from './AccessTokenCard'
@@ -55,20 +56,25 @@ export type { MessageProps } from './Message'
 export { MessageList } from './MessageList'
 export type { MessageListProps } from './MessageList'
 export { OAuthRequestPrompt } from './OAuthRequestPrompt'
-export { PasswordInput } from './PasswordInput'
+// Shared components
+export { OverlayContainer } from './OverlayContainer'
 
+export type { OverlayContainerProps } from './OverlayContainer'
+export { PasswordInput } from './PasswordInput'
 export type { PasswordInputProps } from './PasswordInput'
 // Interactive request forms
 export { RequestOverlay } from './RequestOverlay'
 export type { RequestOverlayProps } from './RequestOverlay'
+export { SelectableRow } from './SelectableRow'
+
+export type { SelectableRowProps } from './SelectableRow'
+
 // Settings
 export { SettingsPanel } from './SettingsPanel'
 export type { SettingsPanelProps } from './SettingsPanel'
 // Side panel
 export { SIDE_PANEL_WIDTH, SidePanel } from './SidePanel'
-
 export type { SidePanelProps } from './SidePanel'
-
 export { SpecialMessage } from './SpecialMessage'
 export type { SpecialMessageProps } from './SpecialMessage'
 export { StatusBar } from './StatusBar'
@@ -77,3 +83,5 @@ export { StatusDialog } from './StatusDialog'
 export type { StatusDialogProps } from './StatusDialog'
 export { ToolActivity } from './ToolActivity'
 export type { ToolActivityProps } from './ToolActivity'
+export { UpdateNotification } from './UpdateNotification'
+export type { UpdateNotificationProps } from './UpdateNotification'

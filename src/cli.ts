@@ -2,10 +2,8 @@ import type { Services } from './services'
 import { Command } from 'commander'
 import pkg from '../package.json'
 
-/** CLI version, surfaced in `/help` and `wf --version`. */
 export const CLI_VERSION = pkg.version
 
-/** Parsed command result from CLI. */
 export type ParsedCommand
   = | { type: 'chat' }
     | { type: 'auth:login', token: string, apiUrl?: string }
@@ -14,10 +12,8 @@ export type ParsedCommand
     | { type: 'config:list' }
     | { type: 'config:get', key: string }
     | { type: 'config:set', key: string, value: string }
+    | { type: 'upgrade', target?: string, method?: 'curl' | 'brew' }
 
-/**
- * Create the CLI program with Commander.js
- */
 export function createProgram(): Command {
   const program = new Command()
 
@@ -31,7 +27,6 @@ export function createProgram(): Command {
     .command('chat', { isDefault: true })
     .description('Start the interactive chat')
 
-  // Auth commands
   const auth = program
     .command('auth')
     .description('Authentication commands')
@@ -50,7 +45,6 @@ export function createProgram(): Command {
     .command('status')
     .description('Show current authentication status')
 
-  // Config commands
   const config = program
     .command('config')
     .description('Configuration commands')
@@ -67,16 +61,17 @@ export function createProgram(): Command {
     .command('list')
     .description('List all configuration values')
 
+  program
+    .command('upgrade [target]')
+    .description('Upgrade the WorkflowFiesta CLI to a newer version')
+    .option('-m, --method <method>', 'Force installation method (curl, brew)')
+
   return program
 }
 
-/**
- * Parse CLI arguments and return the parsed command.
- */
 export function parseArgs(): ParsedCommand {
   const program = createProgram()
 
-  // Track what command was invoked
   let result: ParsedCommand = { type: 'chat' }
 
   // Override actions to capture context
@@ -104,6 +99,15 @@ export function parseArgs(): ParsedCommand {
   })
   configCmd?.commands.find(c => c.name() === 'list')?.action(() => {
     result = { type: 'config:list' }
+  })
+
+  program.commands.find(c => c.name() === 'upgrade')?.action((target, opts) => {
+    const method = opts.method as 'curl' | 'brew' | undefined
+    if (method && method !== 'curl' && method !== 'brew') {
+      console.error(`Invalid method: ${method}. Must be 'curl' or 'brew'.`)
+      process.exit(1)
+    }
+    result = { type: 'upgrade', target: target || undefined, method }
   })
 
   // Parse arguments
@@ -197,6 +201,15 @@ export async function executeCommand(command: ParsedCommand, services: Services)
       getConfigManager().setConfig({ [command.key]: command.value })
       console.log(`✓ Set ${command.key} = ${command.value}`)
       process.exit(0)
+      return true
+    }
+
+    case 'upgrade': {
+      const { upgradeCommand } = await import('./installation')
+      await upgradeCommand({
+        target: command.target,
+        forceMethod: command.method,
+      })
       return true
     }
 

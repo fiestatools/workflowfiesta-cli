@@ -2,8 +2,10 @@ import type { StoredConversation } from '../config'
 import { TextAttributes } from '@opentui/core'
 import { useKeyboard } from '@opentui/react'
 import { useState } from 'react'
-import { BRAND_ORANGE, SUBTLE_BG, themeColors } from '../theme'
+import { themeColors } from '../theme'
+import { formatRelativeTime } from '../utils/dateFormatters'
 import { truncateText } from '../utils/truncateText'
+import { OverlayContainer } from './OverlayContainer'
 
 /** Max title length shown in the delete-confirmation prompt. */
 const CONFIRM_TITLE_MAX_LENGTH = 30
@@ -17,24 +19,6 @@ export interface HistoryViewProps {
   onForget: (uid: string) => void
   onRename: (uid: string, title: string) => void
   onClose: () => void
-}
-
-/** Compact relative-time label (e.g. "3h ago"). */
-function relativeTime(iso: string): string {
-  const then = new Date(iso).getTime()
-  if (Number.isNaN(then))
-    return ''
-  const seconds = Math.max(0, Math.floor((Date.now() - then) / 1000))
-  if (seconds < 60)
-    return 'just now'
-  const minutes = Math.floor(seconds / 60)
-  if (minutes < 60)
-    return `${minutes}m ago`
-  const hours = Math.floor(minutes / 60)
-  if (hours < 24)
-    return `${hours}h ago`
-  const days = Math.floor(hours / 24)
-  return `${days}d ago`
 }
 
 /**
@@ -174,47 +158,28 @@ export function HistoryView({ conversations, currentUid, onSelect, onNew, onForg
       ? 'y confirm · n cancel'
       : '↑↓ move · Enter open · r rename · Space mark · d delete · Esc close'
 
+  const helpContent = confirmLabel
+    ? (
+        <text>
+          <span fg={themeColors.warning} attributes={TextAttributes.BOLD}>
+            {' '}
+            {confirmLabel}
+          </span>
+          <span fg={themeColors.textSubtle}>
+            {' '}
+            {hint}
+          </span>
+        </text>
+      )
+    : undefined
+
   return (
-    <box
-      style={{
-        position: 'absolute',
-        bottom: 4,
-        left: 0,
-        width: '100%',
-        zIndex: 100,
-        backgroundColor: SUBTLE_BG,
-        border: true,
-        borderColor: BRAND_ORANGE,
-        flexDirection: 'column',
-        padding: 1,
-      }}
+    <OverlayContainer
+      title="Conversation history"
+      helpText={helpContent ? undefined : hint}
     >
-      <text>
-        <span fg={themeColors.primary} attributes={TextAttributes.BOLD}> Conversation history</span>
-      </text>
-      {confirmLabel
-        ? (
-            <text>
-              <span
-                fg={themeColors.warning}
-                attributes={TextAttributes.BOLD}
-              >
-                {' '}
-                {confirmLabel}
-              </span>
-              <span fg={themeColors.textSubtle}>
-                {' '}
-                {hint}
-              </span>
-            </text>
-          )
-        : (
-            <text fg={themeColors.textSubtle}>
-              {' '}
-              {hint}
-            </text>
-          )}
-      <text style={{ height: 1 }} />
+      {helpContent}
+      {helpContent && <text style={{ height: 1 }} />}
 
       {/* New chat action */}
       <box flexDirection="row" paddingLeft={1}>
@@ -272,12 +237,12 @@ export function HistoryView({ conversations, currentUid, onSelect, onNew, onForg
                         </text>
                       )}
                   <text>
-                    <span fg={themeColors.textSubtle}>{relativeTime(conv.updatedAt)}</span>
+                    <span fg={themeColors.textSubtle}>{formatRelativeTime(conv.updatedAt)}</span>
                   </text>
                 </box>
               )
             })
           )}
-    </box>
+    </OverlayContainer>
   )
 }

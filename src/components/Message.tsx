@@ -1,6 +1,7 @@
 import type { ChatMessage } from '../chat'
 import { TextAttributes } from '@opentui/core'
 import { SUBTLE_BG, themeColors } from '../theme'
+import { formatTimestamp } from '../utils/dateFormatters'
 import { LoadingSpinner } from './LoadingSpinner'
 import { MarkdownText } from './MarkdownText'
 import { SpecialMessage } from './SpecialMessage'
@@ -9,13 +10,6 @@ import { ToolActivity } from './ToolActivity'
 /** Props for a single message. */
 export interface MessageProps {
   message: ChatMessage
-}
-
-/** Format timestamp for display (HH:MM format). */
-function formatTimestamp(date: Date): string {
-  const hours = date.getHours().toString().padStart(2, '0')
-  const minutes = date.getMinutes().toString().padStart(2, '0')
-  return `${hours}:${minutes}`
 }
 
 /** Single chat message display. */
