@@ -1,3 +1,7 @@
 export { useAnimation } from './useAnimation'
+export { useAutoUpgrade } from './useAutoUpgrade'
+export type { UseAutoUpgradeOptions, UseAutoUpgradeResult } from './useAutoUpgrade'
 export { useChatState } from './useChatState'
+export { useDialogKeyboard } from './useDialogKeyboard'
+export type { DialogKeyboardOptions, DialogKeyboardResult } from './useDialogKeyboard'
 export { useInput } from './useInput'

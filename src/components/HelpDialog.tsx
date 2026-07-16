@@ -1,7 +1,8 @@
 import { TextAttributes } from '@opentui/core'
 import { useKeyboard } from '@opentui/react'
 import { COMMANDS } from '../commands'
-import { BRAND_ORANGE, SUBTLE_BG, themeColors } from '../theme'
+import { themeColors } from '../theme'
+import { OverlayContainer } from './OverlayContainer'
 
 /** Props for the help dialog overlay. */
 export interface HelpDialogProps {
@@ -32,30 +33,11 @@ export function HelpDialog({ version, onClose }: HelpDialogProps) {
   })
 
   return (
-    <box
-      style={{
-        position: 'absolute',
-        bottom: 4,
-        left: 0,
-        width: '100%',
-        zIndex: 100,
-        backgroundColor: SUBTLE_BG,
-        border: true,
-        borderColor: BRAND_ORANGE,
-        flexDirection: 'column',
-        padding: 1,
-      }}
+    <OverlayContainer
+      title="WorkflowFiesta CLI"
+      subtitle={`v${version}`}
+      helpText="Enter or Esc to close"
     >
-      <text>
-        <span fg={themeColors.primary} attributes={TextAttributes.BOLD}> WorkflowFiesta CLI </span>
-        <span fg={themeColors.textSubtle}>
-          v
-          {version}
-        </span>
-      </text>
-      <text fg={themeColors.textSubtle}> Enter or Esc to close</text>
-      <text style={{ height: 1 }} />
-
       <text fg={themeColors.textMuted} attributes={TextAttributes.DIM}> Keyboard shortcuts</text>
       {SHORTCUTS.map(([keys, desc]) => (
         <box key={keys} flexDirection="row" paddingLeft={1}>
@@ -86,6 +68,6 @@ export function HelpDialog({ version, onClose }: HelpDialogProps) {
           <text fg={themeColors.text}>{cmd.description}</text>
         </box>
       ))}
-    </box>
+    </OverlayContainer>
   )
 }

@@ -3,6 +3,7 @@ import type { OverlayKind } from './ChatView'
 import { useKeyboard } from '@opentui/react'
 import { useEffect, useState } from 'react'
 import { CLI_VERSION } from '../cli'
+import { useAutoUpgrade } from '../hooks/useAutoUpgrade'
 import { ChatView, useChatState, useInput } from './index'
 
 export interface ChatInterfaceProps {
@@ -24,6 +25,8 @@ export function ChatInterface({ services }: ChatInterfaceProps) {
   const [sidePanelVisible, setSidePanelVisible] = useState(true)
   const [settingsVisible, setSettingsVisible] = useState(false)
   const [overlay, setOverlay] = useState<OverlayKind>(null)
+
+  const { updateInfo, patchInstalled, dismiss: dismissUpdateNotification } = useAutoUpgrade()
 
   const toggleSidePanel = () => setSidePanelVisible(prev => !prev)
   const openSettings = () => setSettingsVisible(true)
@@ -50,6 +53,12 @@ export function ChatInterface({ services }: ChatInterfaceProps) {
       if (state.isTyping && !modalOpen && !settingsVisible) {
         services.chatService.stopRun()
       }
+      return
+    }
+
+    // 'd' dismisses update notification when visible
+    if (key.name === 'd' && (updateInfo || patchInstalled)) {
+      dismissUpdateNotification()
       return
     }
 
@@ -110,6 +119,9 @@ export function ChatInterface({ services }: ChatInterfaceProps) {
       onHistoryUp={navigateHistoryUp}
       onHistoryDown={navigateHistoryDown}
       onHistoryReset={resetHistoryNavigation}
+      updateInfo={updateInfo}
+      patchInstalled={patchInstalled}
+      onDismissUpdate={dismissUpdateNotification}
     />
   )
 }

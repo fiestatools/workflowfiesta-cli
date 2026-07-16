@@ -19,6 +19,18 @@ export interface CliConfig {
   requestTimeoutMs?: number
   /** UID of the agent to use. Leave empty for org's first agent. */
   agentId?: string
+  /**
+   * Auto-update behavior:
+   * - `true` (default): Auto-install patches, notify for minor/major updates
+   * - `false`: Disable all auto-update checks
+   * - `"notify"`: Only notify about updates, never auto-install
+   */
+  autoupdate?: boolean | 'notify'
+  /**
+   * URL of the install script for curl-based upgrades.
+   * Defaults to GitHub raw URL for the main branch install script.
+   */
+  installScriptUrl?: string
 }
 
 /**

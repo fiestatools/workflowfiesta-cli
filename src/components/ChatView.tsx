@@ -1,6 +1,7 @@
 import type { AuthService } from '../auth'
 import type { ChatService, ChatState } from '../chat'
 import type { Command } from '../commands'
+import type { UpdateInfo } from '../installation'
 import type { SettingsService } from '../settings'
 import { AccessTokenRevealOverlay } from './AccessTokenRevealOverlay'
 import { AgentPicker } from './AgentPicker'
@@ -15,6 +16,7 @@ import { SettingsPanel } from './SettingsPanel'
 import { SidePanel } from './SidePanel'
 import { StatusBar } from './StatusBar'
 import { StatusDialog } from './StatusDialog'
+import { UpdateNotification } from './UpdateNotification'
 
 /** Which command-triggered overlay is currently open, if any. */
 export type OverlayKind = 'agent' | 'help' | 'history' | 'status' | null
@@ -47,6 +49,12 @@ export interface ChatViewProps {
   onHistoryDown?: () => string | undefined
   /** Reset history navigation when user types. */
   onHistoryReset?: () => void
+  /** Update notification info (minor/major update available). */
+  updateInfo?: UpdateInfo | null
+  /** Version of patch that was just auto-installed. */
+  patchInstalled?: string | null
+  /** Callback to dismiss the update notification. */
+  onDismissUpdate?: () => void
 }
 
 /** Main chat view layout. */
@@ -74,6 +82,9 @@ export function ChatView({
   onHistoryUp,
   onHistoryDown,
   onHistoryReset,
+  updateInfo,
+  patchInstalled,
+  onDismissUpdate,
 }: ChatViewProps) {
   // The interactive request (if any) the run is parked on takes over the input.
   const activeRequest = state.pendingRequests[0]
@@ -146,6 +157,15 @@ export function ChatView({
           isConnected={state.isConnected}
           isConnecting={state.isConnecting}
         />
+
+        {/* Update notification banner */}
+        {(updateInfo || patchInstalled) && (
+          <UpdateNotification
+            updateInfo={updateInfo ?? null}
+            patchInstalled={patchInstalled ?? null}
+            onDismiss={onDismissUpdate}
+          />
+        )}
 
         <MessageList
           messages={state.messages}

@@ -1,31 +1,16 @@
 import type { ChatState } from '../chat'
 import { TextAttributes } from '@opentui/core'
 import { useKeyboard } from '@opentui/react'
-import { BRAND_ORANGE, SUBTLE_BG, themeColors } from '../theme'
+import { themeColors } from '../theme'
+import { getConnectionStatus } from '../utils/connectionStatus'
+import { formatRelativeTime } from '../utils/dateFormatters'
+import { OverlayContainer } from './OverlayContainer'
 
 /** Props for the status dialog overlay. */
 export interface StatusDialogProps {
   state: ChatState
   version: string
   onClose: () => void
-}
-
-/** Format a relative time string from a date. */
-function formatRelativeTime(date: Date): string {
-  const now = new Date()
-  const diffMs = now.getTime() - date.getTime()
-  const diffSec = Math.floor(diffMs / 1000)
-  const diffMin = Math.floor(diffSec / 60)
-  const diffHour = Math.floor(diffMin / 60)
-  const diffDay = Math.floor(diffHour / 24)
-
-  if (diffSec < 60)
-    return 'just now'
-  if (diffMin < 60)
-    return `${diffMin}m ago`
-  if (diffHour < 24)
-    return `${diffHour}h ago`
-  return `${diffDay}d ago`
 }
 
 /** Status overlay showing current connection, agent, and conversation info. */
@@ -36,17 +21,7 @@ export function StatusDialog({ state, version, onClose }: StatusDialogProps) {
     }
   })
 
-  const connectionStatus = state.isConnecting
-    ? 'Connecting...'
-    : state.isConnected
-      ? 'Connected'
-      : 'Disconnected'
-
-  const connectionColor = state.isConnecting
-    ? themeColors.warning
-    : state.isConnected
-      ? themeColors.success
-      : themeColors.error
+  const { text: connectionText, color: connectionColor } = getConnectionStatus(state)
 
   const messageCount = state.messages.length
   const userMessages = state.messages.filter(m => m.role === 'user').length
@@ -57,36 +32,17 @@ export function StatusDialog({ state, version, onClose }: StatusDialogProps) {
     : 'N/A'
 
   return (
-    <box
-      style={{
-        position: 'absolute',
-        bottom: 4,
-        left: 0,
-        width: '100%',
-        zIndex: 100,
-        backgroundColor: SUBTLE_BG,
-        border: true,
-        borderColor: BRAND_ORANGE,
-        flexDirection: 'column',
-        padding: 1,
-      }}
+    <OverlayContainer
+      title="Status"
+      subtitle={`v${version}`}
+      helpText="Enter or Esc to close"
     >
-      <text>
-        <span fg={themeColors.primary} attributes={TextAttributes.BOLD}> Status </span>
-        <span fg={themeColors.textSubtle}>
-          v
-          {version}
-        </span>
-      </text>
-      <text fg={themeColors.textSubtle}> Enter or Esc to close</text>
-      <text style={{ height: 1 }} />
-
       <text fg={themeColors.textMuted} attributes={TextAttributes.DIM}> Connection</text>
       <box flexDirection="row" paddingLeft={1}>
         <text style={{ width: 16 }}>
           <span fg={themeColors.info}>Status</span>
         </text>
-        <text fg={connectionColor}>{connectionStatus}</text>
+        <text fg={connectionColor}>{connectionText}</text>
       </box>
       <text style={{ height: 1 }} />
 
@@ -153,6 +109,6 @@ export function StatusDialog({ state, version, onClose }: StatusDialogProps) {
           <text fg={themeColors.warning}>Agent is responding...</text>
         </box>
       )}
-    </box>
+    </OverlayContainer>
   )
 }
