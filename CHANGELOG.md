@@ -1,5 +1,11 @@
 # @workflowfiesta/cli
 
+## 0.6.0
+
+### Minor Changes
+
+- [#53](https://github.com/fiestatools/workflowfiesta-cli/pull/53) [`f12e25b`](https://github.com/fiestatools/workflowfiesta-cli/commit/f12e25b79d3d5d4956556d098342e2e26d9ba699) Thanks [@awaitimport](https://github.com/awaitimport)! - Add upgrade command to cli
+
 ## 0.5.0
 
 ### Minor Changes
