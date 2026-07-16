@@ -35,3 +35,16 @@ export class VersionFetchError extends Error {
     super(`Failed to fetch latest version from ${source}: ${reason}`)
   }
 }
+
+export class UninstallFailedError extends Error {
+  override readonly name = 'UninstallFailedError'
+
+  constructor(
+    public readonly method: InstallationMethod,
+    public readonly reason: string,
+    public readonly exitCode?: number,
+  ) {
+    const exitInfo = exitCode !== undefined ? ` (exit code: ${exitCode})` : ''
+    super(`Uninstall failed using ${method}${exitInfo}: ${reason}`)
+  }
+}

@@ -13,6 +13,7 @@ export type ParsedCommand
     | { type: 'config:get', key: string }
     | { type: 'config:set', key: string, value: string }
     | { type: 'upgrade', target?: string, method?: 'curl' | 'brew' }
+    | { type: 'uninstall', keepData: boolean, dryRun: boolean, force: boolean }
 
 export function createProgram(): Command {
   const program = new Command()
@@ -66,6 +67,13 @@ export function createProgram(): Command {
     .description('Upgrade the WorkflowFiesta CLI to a newer version')
     .option('-m, --method <method>', 'Force installation method (curl, brew)')
 
+  program
+    .command('uninstall')
+    .description('Uninstall WorkflowFiesta CLI')
+    .option('--keep-data', 'Keep conversation data', false)
+    .option('--dry-run', 'Show what would be removed without removing', false)
+    .option('-f, --force', 'Skip confirmation prompt', false)
+
   return program
 }
 
@@ -108,6 +116,15 @@ export function parseArgs(): ParsedCommand {
       process.exit(1)
     }
     result = { type: 'upgrade', target: target || undefined, method }
+  })
+
+  program.commands.find(c => c.name() === 'uninstall')?.action((opts) => {
+    result = {
+      type: 'uninstall',
+      keepData: opts.keepData ?? false,
+      dryRun: opts.dryRun ?? false,
+      force: opts.force ?? false,
+    }
   })
 
   // Parse arguments
@@ -209,6 +226,16 @@ export async function executeCommand(command: ParsedCommand, services: Services)
       await upgradeCommand({
         target: command.target,
         forceMethod: command.method,
+      })
+      return true
+    }
+
+    case 'uninstall': {
+      const { uninstallCommand } = await import('./installation')
+      await uninstallCommand({
+        keepData: command.keepData,
+        dryRun: command.dryRun,
+        force: command.force,
       })
       return true
     }
