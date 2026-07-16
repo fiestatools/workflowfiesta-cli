@@ -1,5 +1,11 @@
 # @workflowfiesta/cli
 
+## 0.7.0
+
+### Minor Changes
+
+- [#55](https://github.com/fiestatools/workflowfiesta-cli/pull/55) [`ed559a8`](https://github.com/fiestatools/workflowfiesta-cli/commit/ed559a82d28ed259c820e91dae904094263d4a29) Thanks [@awaitimport](https://github.com/awaitimport)! - Add uninstall command
+
 ## 0.6.0
 
 ### Minor Changes
