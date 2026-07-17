@@ -222,6 +222,7 @@ export async function upgradeCommand(options: {
     else {
       console.log('\nUpgrade complete') // eslint-disable-line no-console -- CLI output
     }
+    process.exit(0)
   }
   catch (error) {
     if (error instanceof UpgradeFailedError) {
