@@ -23,7 +23,8 @@ async function main(): Promise<void> {
     return
   }
 
-  await startApp(services)
+  const continueLastSession = command.type === 'chat' && command.continue
+  await startApp(services, { continueLastSession })
 }
 
 main().catch((error) => {

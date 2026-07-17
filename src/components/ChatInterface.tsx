@@ -8,10 +8,11 @@ import { ChatView, useChatState, useInput } from './index'
 
 export interface ChatInterfaceProps {
   services: Services
+  continueLastSession?: boolean
 }
 
 /** Main chat interface with keyboard shortcuts and state management. */
-export function ChatInterface({ services }: ChatInterfaceProps) {
+export function ChatInterface({ services, continueLastSession }: ChatInterfaceProps) {
   const state = useChatState(services.chatService)
   const {
     input,
@@ -91,8 +92,14 @@ export function ChatInterface({ services }: ChatInterfaceProps) {
   })
 
   useEffect(() => {
-    void services.chatService.initialize()
-  }, [services.chatService])
+    const init = async () => {
+      await services.chatService.initialize()
+      if (continueLastSession) {
+        await services.chatService.continueLastConversation()
+      }
+    }
+    void init()
+  }, [services.chatService, continueLastSession])
 
   return (
     <ChatView
