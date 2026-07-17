@@ -1,5 +1,11 @@
 # @workflowfiesta/cli
 
+## 0.8.1
+
+### Patch Changes
+
+- [#59](https://github.com/fiestatools/workflowfiesta-cli/pull/59) [`45c9f30`](https://github.com/fiestatools/workflowfiesta-cli/commit/45c9f30c11490cf5eabfd32179035f528a661d93) Thanks [@awaitimport](https://github.com/awaitimport)! - exit process after upgrade completion
+
 ## 0.8.0
 
 ### Minor Changes
