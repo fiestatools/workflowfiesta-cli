@@ -1,5 +1,11 @@
 # @workflowfiesta/cli
 
+## 0.8.0
+
+### Minor Changes
+
+- [#57](https://github.com/fiestatools/workflowfiesta-cli/pull/57) [`8ea8196`](https://github.com/fiestatools/workflowfiesta-cli/commit/8ea81960b6bcee5e8c9509fbb3c7663894ca717e) Thanks [@awaitimport](https://github.com/awaitimport)! - Add --continue flag to CLI to resume the last conversation
+
 ## 0.7.0
 
 ### Minor Changes
