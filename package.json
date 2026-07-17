@@ -1,7 +1,7 @@
 {
   "name": "@workflowfiesta/cli",
   "type": "module",
-  "version": "0.7.0",
+  "version": "0.8.0",
   "private": true,
   "description": "WorkflowFiesta CLI - Terminal interface for WorkflowFiesta AI agents",
   "license": "SEE LICENSE IN LICENSE",
