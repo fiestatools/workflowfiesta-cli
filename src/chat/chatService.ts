@@ -434,7 +434,18 @@ export class ChatService {
     }
   }
 
-  /** Clear current chat (alias for newChat). */
+  async continueLastConversation(): Promise<boolean> {
+    const conversations = this.listConversations()
+    const lastConversation = conversations[0]
+    if (!lastConversation) {
+      this.addSystemMessage('No previous conversations found. Starting a new chat.')
+      return false
+    }
+
+    await this.switchConversation(lastConversation.uid)
+    return true
+  }
+
   clearChat(): void {
     this.newChat()
   }

@@ -6,7 +6,11 @@ import { AuthGate, ChatInterface, ErrorBoundary, LoadingScreen } from './compone
 
 type AppView = 'loading' | 'auth' | 'chat'
 
-export function App({ services }: { services: Services | null }) {
+export interface StartAppOptions {
+  continueLastSession?: boolean
+}
+
+export function App({ services, continueLastSession }: { services: Services | null, continueLastSession?: boolean }) {
   const [view, setView] = useState<AppView>('loading')
 
   useEffect(() => {
@@ -38,15 +42,15 @@ export function App({ services }: { services: Services | null }) {
     )
   }
 
-  return <ChatInterface services={services} />
+  return <ChatInterface services={services} continueLastSession={continueLastSession} />
 }
 
-export async function startApp(services: Services): Promise<void> {
+export async function startApp(services: Services, options?: StartAppOptions): Promise<void> {
   const renderer = await createCliRenderer()
   const root = createRoot(renderer)
   root.render(
     <ErrorBoundary title="Application Error">
-      <App services={services} />
+      <App services={services} continueLastSession={options?.continueLastSession} />
     </ErrorBoundary>,
   )
 }
