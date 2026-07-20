@@ -1,4 +1,5 @@
 import type { QueryParams, RequestOptions, TokenProvider } from './types'
+import { CLI_VERSION } from '../cli'
 import { logger } from '../logger'
 import { ApiError, NetworkError, UnauthorizedError } from './errors'
 
@@ -69,7 +70,10 @@ export class ApiClient {
     const usingStoredToken = token === undefined
     const authToken = token ?? (await this.options.tokenProvider.getToken())
 
-    const headers: Record<string, string> = { Accept: 'application/json' }
+    const headers: Record<string, string> = {
+      'Accept': 'application/json',
+      'User-Agent': `Workflowfiesta-CLI/${CLI_VERSION}`,
+    }
     if (authToken) {
       headers.Authorization = `Bearer ${authToken}`
     }
