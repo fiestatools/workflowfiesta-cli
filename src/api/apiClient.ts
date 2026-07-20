@@ -1,7 +1,7 @@
 import type { QueryParams, RequestOptions, TokenProvider } from './types'
+import { CLI_VERSION } from '../cli'
 import { logger } from '../logger'
 import { ApiError, NetworkError, UnauthorizedError } from './errors'
-import { CLI_VERSION } from '../cli'
 
 /** Construction dependencies for {@link ApiClient}. */
 export interface ApiClientOptions {
