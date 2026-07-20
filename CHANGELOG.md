@@ -1,5 +1,11 @@
 # @workflowfiesta/cli
 
+## 0.8.2
+
+### Patch Changes
+
+- [#61](https://github.com/fiestatools/workflowfiesta-cli/pull/61) [`76ef1d7`](https://github.com/fiestatools/workflowfiesta-cli/commit/76ef1d7e3096b59c791d748717991b8318975f35) Thanks [@awaitimport](https://github.com/awaitimport)! - Add User-Agent header when calling WF API
+
 ## 0.8.1
 
 ### Patch Changes
