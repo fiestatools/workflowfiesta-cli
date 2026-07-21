@@ -40,11 +40,15 @@
     "@opentui/core": "^0.4.3",
     "@opentui/react": "^0.4.3",
     "commander": "^15.0.0",
+    "deepmerge": "^4.3.1",
+    "find-up": "^8.0.0",
+    "jsonc-parser": "^3.3.1",
     "open": "^11.0.0",
     "ora": "^9.4.1",
     "prompts": "^2.4.2",
     "react": "^19.2.6",
-    "semver": "^7.8.5"
+    "semver": "^7.8.5",
+    "zod": "3.23.8"
   },
   "devDependencies": {
     "@antfu/eslint-config": "^9.1.0",

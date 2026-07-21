@@ -2,6 +2,7 @@ import type { InstallationMethod } from './detection'
 import { existsSync } from 'node:fs'
 import { homedir } from 'node:os'
 import { dirname, join } from 'node:path'
+import { getGlobalConfigDir, getLegacyGlobalConfigDir } from '../config'
 
 export type ShellType = 'bash' | 'zsh' | 'fish' | 'sh'
 
@@ -13,8 +14,11 @@ export interface ShellConfigFile {
 }
 
 export interface UninstallTargets {
-  /** Config directory (~/.config/workflowfiesta/cli/) */
+  /** New config directory (~/.config/workflowfiesta/) */
   configDir: string
+
+  /** Legacy config directory (~/.config/workflowfiesta/cli/) - for migration */
+  legacyConfigDir: string
 
   /** Data file path (conversations.json) - kept if --keep-data */
   dataFile: string
@@ -107,14 +111,15 @@ export function getUninstallTargets(
   method: InstallationMethod,
   execPath: string,
 ): UninstallTargets {
-  const home = homedir()
-  const configDir = join(home, '.config', 'workflowfiesta', 'cli')
-  const dataFile = join(configDir, 'conversations.json')
+  const configDir = getGlobalConfigDir()
+  const legacyConfigDir = getLegacyGlobalConfigDir()
+  const dataFile = join(legacyConfigDir, 'conversations.json')
   const { binaryDir, binaryPath } = getBinaryPaths(method, execPath)
   const shellConfigs = getExistingShellConfigs()
 
   return {
     configDir,
+    legacyConfigDir,
     dataFile,
     binaryDir,
     binaryPath,
