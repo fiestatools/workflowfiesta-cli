@@ -1,5 +1,11 @@
 # @workflowfiesta/cli
 
+## 0.9.0
+
+### Minor Changes
+
+- [#63](https://github.com/fiestatools/workflowfiesta-cli/pull/63) [`6178841`](https://github.com/fiestatools/workflowfiesta-cli/commit/6178841f66e9a290ab77b621ef1e5b8eadbb98b8) Thanks [@awaitimport](https://github.com/awaitimport)! - Add config support including global, project and directory configs with precedence
+
 ## 0.8.2
 
 ### Patch Changes
