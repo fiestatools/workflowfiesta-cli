@@ -1,104 +1,221 @@
 import type { AuthService } from '../auth/authService'
+import type { ProjectConfigResult } from './projectConfig'
+import type { WorkflowfiestaConfig } from './schema'
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs'
-import { homedir } from 'node:os'
-import { join } from 'node:path'
+import { dirname } from 'node:path'
+import { logger } from '../logger'
+import { discoverConfigs, getGlobalConfigDir, getGlobalConfigPath } from './discovery'
+import { parseJsoncOrThrow } from './jsonc'
+import { deepMerge } from './merge'
+import { loadProjectConfig } from './projectConfig'
 
-/** Fallback when the user has not configured a backend URL. */
 const DEFAULT_API_BASE_URL = 'https://api.workflowfiesta.com'
 
-/** Fallback request timeout. */
 const DEFAULT_REQUEST_TIMEOUT_MS = 30_000
 
 /**
- * CLI configuration schema.
+ * CLI configuration type alias for backwards compatibility.
+ * @deprecated Use WorkflowfiestaConfig instead
  */
-export interface CliConfig {
-  /** Base URL of the WorkflowFiesta backend API. */
-  apiBaseUrl?: string
-  /** Timeout in milliseconds for API requests. */
-  requestTimeoutMs?: number
-  /** UID of the agent to use. Leave empty for org's first agent. */
-  agentId?: string
-  /**
-   * Auto-update behavior:
-   * - `true` (default): Auto-install patches, notify for minor/major updates
-   * - `false`: Disable all auto-update checks
-   * - `"notify"`: Only notify about updates, never auto-install
-   */
-  autoupdate?: boolean | 'notify'
-  /**
-   * URL of the install script for curl-based upgrades.
-   * Defaults to GitHub raw URL for the main branch install script.
-   */
-  installScriptUrl?: string
-}
+export type CliConfig = WorkflowfiestaConfig
 
 /**
- * Manages CLI configuration stored in `~/.config/workflowfiesta/cli/config.json`.
+ * Manages CLI configuration using the new hierarchical config system.
+ *
+ * Configuration is loaded from multiple sources in priority order:
+ * 1. Global config: ~/.config/workflowfiesta/workflowfiesta.json(c)
+ * 2. Legacy config (deprecated): ~/.config/workflowfiesta/cli/config.json
+ * 3. Project config: <project-root>/workflowfiesta.json(c)
+ * 4. Directory configs: .workflowfiesta/workflowfiesta.json(c) walking up from CWD
  */
 export class ConfigManager {
-  private readonly configPath: string
-  private cachedConfig: CliConfig | null = null
+  private readonly globalConfigPath: string
+  private cachedConfig: WorkflowfiestaConfig | null = null
+  private cachedProjectConfig: ProjectConfigResult | null = null
+  private cachedWarnings: string[] = []
+  private readonly startDir: string
+  private configLoadPromise: Promise<WorkflowfiestaConfig> | null = null
+  private projectConfigLoadPromise: Promise<ProjectConfigResult> | null = null
 
-  constructor(configDir?: string) {
-    const baseDir = configDir ?? join(homedir(), '.config', 'workflowfiesta', 'cli')
-    this.configPath = join(baseDir, 'config.json')
+  constructor(startDir?: string) {
+    this.startDir = startDir ?? process.cwd()
+    this.globalConfigPath = getGlobalConfigPath()
 
-    // Ensure the config directory exists
-    if (!existsSync(baseDir)) {
-      mkdirSync(baseDir, { recursive: true, mode: 0o700 })
+    const globalDir = getGlobalConfigDir()
+    if (!existsSync(globalDir)) {
+      mkdirSync(globalDir, { recursive: true, mode: 0o700 })
     }
   }
 
-  /** Get the full configuration, with defaults applied. */
-  getConfig(): CliConfig {
+  async getConfigAsync(): Promise<WorkflowfiestaConfig> {
     if (this.cachedConfig) {
       return this.cachedConfig
     }
 
-    if (!existsSync(this.configPath)) {
-      return {}
+    // Avoid concurrent loads
+    if (this.configLoadPromise) {
+      return this.configLoadPromise
     }
 
+    this.configLoadPromise = this.loadConfig()
     try {
-      const content = readFileSync(this.configPath, 'utf-8')
-      this.cachedConfig = JSON.parse(content) as CliConfig
+      return await this.configLoadPromise
+    }
+    finally {
+      this.configLoadPromise = null
+    }
+  }
+
+  private async loadConfig(): Promise<WorkflowfiestaConfig> {
+    try {
+      const result = await discoverConfigs(this.startDir)
+      this.cachedConfig = result.merged
+      this.cachedWarnings = result.warnings
+
+      for (const warning of result.warnings) {
+        logger.warn(warning)
+      }
+
       return this.cachedConfig
     }
-    catch {
+    catch (error) {
+      logger.error(`Failed to load configuration: ${error instanceof Error ? error.message : String(error)}`)
       return {}
     }
   }
 
-  /** Update configuration values (merges with existing). */
-  setConfig(updates: Partial<CliConfig>): void {
-    const current = this.getConfig()
-    const merged = { ...current, ...updates }
-    writeFileSync(this.configPath, JSON.stringify(merged, null, 2), { mode: 0o600 })
-    this.cachedConfig = merged
+  /**
+   * Get the full merged configuration from all sources (sync).
+   * Uses cached value or returns empty config if not yet loaded.
+   * Prefer getConfigAsync() for first load.
+   */
+  getConfig(): WorkflowfiestaConfig {
+    if (this.cachedConfig) {
+      return this.cachedConfig
+    }
+
+    // Start async load in background if not already loading
+    if (!this.configLoadPromise) {
+      this.configLoadPromise = this.loadConfig()
+      this.configLoadPromise.finally(() => {
+        this.configLoadPromise = null
+      })
+    }
+
+    return {}
   }
 
-  /** Clear the cached config to force a re-read. */
+  /**
+   * Get the full project configuration including agents and commands (async).
+   */
+  async getProjectConfigAsync(): Promise<ProjectConfigResult> {
+    if (this.cachedProjectConfig) {
+      return this.cachedProjectConfig
+    }
+
+    // Avoid concurrent loads
+    if (this.projectConfigLoadPromise) {
+      return this.projectConfigLoadPromise
+    }
+
+    this.projectConfigLoadPromise = loadProjectConfig(this.startDir)
+    try {
+      this.cachedProjectConfig = await this.projectConfigLoadPromise
+      return this.cachedProjectConfig
+    }
+    finally {
+      this.projectConfigLoadPromise = null
+    }
+  }
+
+  /**
+   * Get the full project configuration including agents and commands (sync).
+   * Uses cached value or returns empty result if not yet loaded.
+   * @deprecated Use getProjectConfigAsync() instead
+   */
+  getProjectConfig(): ProjectConfigResult {
+    if (this.cachedProjectConfig) {
+      return this.cachedProjectConfig
+    }
+
+    if (!this.projectConfigLoadPromise) {
+      this.projectConfigLoadPromise = loadProjectConfig(this.startDir)
+      this.projectConfigLoadPromise
+        .then((result) => {
+          this.cachedProjectConfig = result
+        })
+        .finally(() => {
+          this.projectConfigLoadPromise = null
+        })
+    }
+
+    return {
+      config: {},
+      agents: new Map(),
+      commands: new Map(),
+      warnings: [],
+      sourceFiles: [],
+    }
+  }
+
+  getWarnings(): string[] {
+    return this.cachedWarnings
+  }
+
+  /**
+   * Update global configuration values (merges with existing).
+   * Writes to the global config file at ~/.config/workflowfiesta/workflowfiesta.json
+   */
+  setConfig(updates: Partial<WorkflowfiestaConfig>): void {
+    // Load current global config only (not merged)
+    let current: Partial<WorkflowfiestaConfig> = {}
+    if (existsSync(this.globalConfigPath)) {
+      try {
+        const content = readFileSync(this.globalConfigPath, 'utf-8')
+        current = parseJsoncOrThrow(content, this.globalConfigPath)
+      }
+      catch {
+        // Start fresh if current config is invalid
+      }
+    }
+
+    // Deep merge updates
+    const merged = deepMerge(current, updates) as WorkflowfiestaConfig
+
+    // Ensure directory exists
+    const configDir = dirname(this.globalConfigPath)
+    if (!existsSync(configDir)) {
+      mkdirSync(configDir, { recursive: true, mode: 0o700 })
+    }
+
+    writeFileSync(this.globalConfigPath, JSON.stringify(merged, null, 2), { mode: 0o600 })
+    this.clearCache()
+  }
+
   clearCache(): void {
     this.cachedConfig = null
+    this.cachedProjectConfig = null
+    this.cachedWarnings = []
+  }
+
+  getGlobalConfigPath(): string {
+    return this.globalConfigPath
   }
 }
 
-/** Global config manager instance. */
 let configManager: ConfigManager | undefined
 
-/** Get or create the global config manager. */
-export function getConfigManager(): ConfigManager {
-  configManager ??= new ConfigManager()
+export function getConfigManager(startDir?: string): ConfigManager {
+  if (!configManager || startDir) {
+    configManager = new ConfigManager(startDir)
+  }
   return configManager
 }
 
-/**
- * Base URL of the WorkflowFiesta backend, without a trailing slash.
- *
- * Read fresh on every call so changes take effect without restarting.
- * API paths are always joined as `${baseUrl}/api/...`.
- */
+export function resetConfigManager(): void {
+  configManager = undefined
+}
+
 export function getApiBaseUrl(): string {
   const config = getConfigManager().getConfig()
   const raw = config.apiBaseUrl?.trim() || DEFAULT_API_BASE_URL
@@ -127,7 +244,6 @@ export function createGetApiBaseUrl(authService: AuthService): () => Promise<str
   }
 }
 
-/** Per-request timeout in milliseconds. Falls back to the default on invalid input. */
 export function getRequestTimeoutMs(): number {
   const config = getConfigManager().getConfig()
   const configured = config.requestTimeoutMs
@@ -136,20 +252,11 @@ export function getRequestTimeoutMs(): number {
     : DEFAULT_REQUEST_TIMEOUT_MS
 }
 
-/**
- * Create a function that returns the WebSocket base URL for run-event streaming,
- * derived from the resolved API base URL (`http`→`ws`, `https`→`wss`), without a
- * trailing slash. The stream endpoint is joined as `${wsBaseUrl}/ws`.
- */
 export function createGetWsBaseUrl(authService: AuthService): () => Promise<string> {
   const getApiUrl = createGetApiBaseUrl(authService)
   return async (): Promise<string> => (await getApiUrl()).replace(/^http/, 'ws')
 }
 
-/**
- * Agent the CLI runs, if pinned via `agentId` config.
- * When empty, the run service falls back to the org's first agent.
- */
 export function getConfiguredAgentId(): string | undefined {
   const config = getConfigManager().getConfig()
   return config.agentId?.trim() || undefined

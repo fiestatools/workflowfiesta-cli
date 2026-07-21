@@ -1,8 +1,6 @@
-/**
- * Command definitions for the CLI command palette.
- */
+import type { CommandConfig } from './config'
+import { getConfigManager } from './config'
 
-/** A command that can be executed from the command palette. */
 export interface Command {
   /** Primary name of the command (used with /name). */
   name: string
@@ -16,10 +14,12 @@ export interface Command {
   requiresArgs?: boolean
   /** Placeholder text for arguments. */
   argsPlaceholder?: string
+  /** Whether this is a user-defined command from config. */
+  isCustom?: boolean
 }
 
-/** All available commands. */
-export const COMMANDS: Command[] = [
+/** All built-in commands. */
+export const BUILTIN_COMMANDS: Command[] = [
   // Chat commands
   {
     name: 'new',
@@ -112,17 +112,79 @@ export const COMMANDS: Command[] = [
   },
 ]
 
+function commandConfigToCommand(config: CommandConfig): Command {
+  return {
+    name: config.name,
+    alias: config.alias,
+    description: config.description,
+    category: config.category ?? 'chat',
+    requiresArgs: config.requiresArgs,
+    argsPlaceholder: config.argsPlaceholder,
+    isCustom: true,
+  }
+}
+
+let cachedCommands: Command[] | null = null
+
+export function getCommands(): Command[] {
+  if (cachedCommands) {
+    return cachedCommands
+  }
+
+  const commandMap = new Map<string, Command>()
+  for (const cmd of BUILTIN_COMMANDS) {
+    commandMap.set(cmd.name, cmd)
+  }
+
+  try {
+    const projectConfig = getConfigManager().getProjectConfig()
+    for (const [name, cmdConfig] of projectConfig.commands) {
+      const existingCmd = commandMap.get(name)
+      if (existingCmd) {
+        commandMap.set(name, {
+          ...existingCmd,
+          ...commandConfigToCommand(cmdConfig),
+        })
+      }
+      else {
+        commandMap.set(name, commandConfigToCommand(cmdConfig))
+      }
+    }
+  }
+  catch {
+    // Ignore config errors, use built-in commands only
+  }
+
+  cachedCommands = Array.from(commandMap.values())
+  return cachedCommands
+}
+
+/**
+ * Clear the cached commands list (call after config changes).
+ */
+export function clearCommandsCache(): void {
+  cachedCommands = null
+}
+
+/**
+ * All available commands (alias for getCommands() for backwards compatibility).
+ * @deprecated Use getCommands() instead for dynamic command loading.
+ */
+export const COMMANDS: Command[] = BUILTIN_COMMANDS
+
 /**
  * Filter commands by search query.
  * Matches against name, alias, and description.
  */
 export function filterCommands(query: string): Command[] {
+  const commands = getCommands()
+
   if (!query)
-    return COMMANDS
+    return commands
 
   const lowerQuery = query.toLowerCase()
 
-  return COMMANDS.filter((cmd) => {
+  return commands.filter((cmd) => {
     const nameMatch = cmd.name.toLowerCase().startsWith(lowerQuery)
     const aliasMatch = cmd.alias?.toLowerCase().startsWith(lowerQuery)
     const descMatch = cmd.description.toLowerCase().includes(lowerQuery)
@@ -130,21 +192,14 @@ export function filterCommands(query: string): Command[] {
   })
 }
 
-/**
- * Find a command by exact name or alias.
- */
 export function findCommand(nameOrAlias: string): Command | undefined {
+  const commands = getCommands()
   const lower = nameOrAlias.toLowerCase()
-  return COMMANDS.find(
+  return commands.find(
     cmd => cmd.name.toLowerCase() === lower || cmd.alias?.toLowerCase() === lower,
   )
 }
 
-/**
- * Split palette input (without the leading /) into the command word and the
- * argument string that follows it (e.g. "rename My title" → word "rename",
- * args "My title"). Argument casing and inner whitespace are preserved.
- */
 export function parseCommandInput(raw: string): { word: string, args: string } {
   const trimmed = raw.trimStart()
   const spaceIdx = trimmed.search(/\s/)
