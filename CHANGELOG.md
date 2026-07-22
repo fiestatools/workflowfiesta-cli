@@ -1,5 +1,11 @@
 # @workflowfiesta/cli
 
+## 0.11.0
+
+### Minor Changes
+
+- [#67](https://github.com/fiestatools/workflowfiesta-cli/pull/67) [`8716ca2`](https://github.com/fiestatools/workflowfiesta-cli/commit/8716ca27f00556c4197bfabf62e08921c128c2fe) Thanks [@awaitimport](https://github.com/awaitimport)! - Add run command to CLI for programmatic usage
+
 ## 0.10.0
 
 ### Minor Changes
