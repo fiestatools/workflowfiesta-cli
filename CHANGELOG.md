@@ -1,5 +1,11 @@
 # @workflowfiesta/cli
 
+## 0.10.0
+
+### Minor Changes
+
+- [#65](https://github.com/fiestatools/workflowfiesta-cli/pull/65) [`27f13e4`](https://github.com/fiestatools/workflowfiesta-cli/commit/27f13e402713767a38c1b791ac4984b490a80b84) Thanks [@awaitimport](https://github.com/awaitimport)! - Add providers support including creating, listing and selecting
+
 ## 0.9.0
 
 ### Minor Changes
