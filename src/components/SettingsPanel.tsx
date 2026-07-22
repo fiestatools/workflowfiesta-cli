@@ -1,19 +1,20 @@
 import type { AuthService } from '../auth'
 import type { CliConfig } from '../config'
 import type { AgentSummary } from '../runs'
-import type { Identity, SettingsService } from '../settings'
+import type { CreateProviderConfig, Identity, ProviderSummary, SettingsService } from '../settings'
 import { TextAttributes } from '@opentui/core'
 import { useKeyboard } from '@opentui/react'
 import { useCallback, useEffect, useState } from 'react'
 import { getConfigManager } from '../config'
+import { PROVIDER_TYPE_LABELS } from '../settings'
 import { BRAND_ORANGE, SUBTLE_BG, themeColors } from '../theme'
 import { openUrl } from '../utils/openUrl'
+import { AddProviderForm } from './AddProviderForm'
 import { AgentPicker } from './AgentPicker'
+import { ProviderPicker } from './ProviderPicker'
 
-/** Documentation URL */
 const DOCS_URL = 'https://testfiesta.gitbook.io/workflowfiesta'
 
-/** Default values for settings. */
 const DEFAULTS = {
   apiBaseUrl: 'https://api.workflowfiesta.com',
   requestTimeoutMs: 30000,
@@ -56,7 +57,6 @@ function formatExpiry(iso: string): string {
   return expired ? `${label} (expired)` : label
 }
 
-/** Settings panel component - renders as an overlay dialog. */
 export function SettingsPanel({ authService, settingsService, agents, onDefaultAgentChanged, onClose }: SettingsPanelProps) {
   const [config, setConfig] = useState<CliConfig>({})
   const [apiUrlOverride, setApiUrlOverride] = useState<string | undefined>()
@@ -67,12 +67,16 @@ export function SettingsPanel({ authService, settingsService, agents, onDefaultA
   const [accountFingerprint, setAccountFingerprint] = useState<string | undefined>()
   const [identity, setIdentity] = useState<Identity | null>(null)
   const [agentPickerOpen, setAgentPickerOpen] = useState(false)
+  const [providerPickerOpen, setProviderPickerOpen] = useState(false)
+  const [addProviderOpen, setAddProviderOpen] = useState(false)
+  const [providers, setProviders] = useState<ProviderSummary[]>([])
   const [message, setMessage] = useState<{ type: 'success' | 'error', text: string } | null>(null)
 
-  // Row layout: editable fields, then the default-agent row, docs, and (when
+  // Row layout: editable fields, then the default-agent row, provider row, docs, and (when
   // signed in) sign out.
   const agentRowIndex = SETTING_FIELDS.length
-  const docsIndex = agentRowIndex + 1
+  const providerRowIndex = agentRowIndex + 1
+  const docsIndex = providerRowIndex + 1
   const signOutIndex = docsIndex + 1
   const totalItems = signOutIndex + (isAuthenticated ? 1 : 0)
 
@@ -87,6 +91,12 @@ export function SettingsPanel({ authService, settingsService, agents, onDefaultA
     : accountDefaultAgent
       ? `Account default (${accountDefaultAgent.name})`
       : 'Account default'
+
+  /** The current default provider. */
+  const currentProvider = providers.find(p => p.isDefault)
+  const providerRowValue = currentProvider
+    ? `${currentProvider.name} (${PROVIDER_TYPE_LABELS[currentProvider.type] ?? currentProvider.type})`
+    : 'Not configured'
 
   /** Get the display value for a setting field. */
   const getDisplayValue = (field: SettingFieldConfig): { value: string, isDefault: boolean, source?: string } => {
@@ -115,6 +125,7 @@ export function SettingsPanel({ authService, settingsService, agents, onDefaultA
     void authService.getAccountFingerprint().then(setAccountFingerprint)
     void authService.getApiUrlOverride().then(setApiUrlOverride)
     void settingsService.getIdentity().then(setIdentity).catch(() => setIdentity(null))
+    void settingsService.listProviders().then(setProviders).catch(() => setProviders([]))
   }, [authService, settingsService])
 
   // Clear message after 2 seconds
@@ -187,6 +198,35 @@ export function SettingsPanel({ authService, settingsService, agents, onDefaultA
     setMessage({ type: 'success', text: 'Using account default agent' })
   }, [onDefaultAgentChanged])
 
+  const handleSelectProvider = useCallback(async (providerId: string) => {
+    try {
+      await settingsService.setDefaultProvider(providerId)
+      setProviders(prev => prev.map(p => ({
+        ...p,
+        isDefault: p.uid === providerId,
+      })))
+      setProviderPickerOpen(false)
+      const name = providers.find(p => p.uid === providerId)?.name ?? 'provider'
+      setMessage({ type: 'success', text: `Default provider set to ${name}` })
+    }
+    catch {
+      setMessage({ type: 'error', text: 'Failed to set default provider' })
+    }
+  }, [settingsService, providers])
+
+  const handleCreateProvider = useCallback(async (config: CreateProviderConfig) => {
+    const newProvider = await settingsService.createProvider(config)
+    setProviders(prev => [...prev, newProvider])
+    setAddProviderOpen(false)
+    setMessage({ type: 'success', text: `Provider "${newProvider.name}" created` })
+    return newProvider
+  }, [settingsService])
+
+  const handleAddNewProvider = useCallback(() => {
+    setProviderPickerOpen(false)
+    setAddProviderOpen(true)
+  }, [])
+
   const handleSignOut = useCallback(async () => {
     await authService.signOut()
     setIsAuthenticated(false)
@@ -204,10 +244,10 @@ export function SettingsPanel({ authService, settingsService, agents, onDefaultA
     }
   }, [])
 
-  // Keyboard navigation. Suppressed while the nested agent picker owns the
-  // keyboard (it has its own handler).
+  // Keyboard navigation. Suppressed while the nested agent picker, provider
+  // picker, or add provider form owns the keyboard (they have their own handlers).
   useKeyboard((key) => {
-    if (agentPickerOpen)
+    if (agentPickerOpen || providerPickerOpen || addProviderOpen)
       return
 
     // Close on Escape
@@ -252,6 +292,9 @@ export function SettingsPanel({ authService, settingsService, agents, onDefaultA
       else if (selectedIndex === agentRowIndex) {
         setAgentPickerOpen(true)
       }
+      else if (selectedIndex === providerRowIndex) {
+        setProviderPickerOpen(true)
+      }
       else if (selectedIndex === docsIndex) {
         void handleOpenDocs()
       }
@@ -271,6 +314,28 @@ export function SettingsPanel({ authService, settingsService, agents, onDefaultA
         onUseDefault={handleUseAccountDefault}
         defaultAgentName={accountDefaultAgent?.name}
         onClose={() => setAgentPickerOpen(false)}
+      />
+    )
+  }
+
+  if (providerPickerOpen) {
+    return (
+      <ProviderPicker
+        title="AI Provider"
+        providers={providers}
+        currentProviderId={currentProvider?.uid}
+        onSelect={handleSelectProvider}
+        onAddNew={handleAddNewProvider}
+        onClose={() => setProviderPickerOpen(false)}
+      />
+    )
+  }
+
+  if (addProviderOpen) {
+    return (
+      <AddProviderForm
+        onSubmit={handleCreateProvider}
+        onClose={() => setAddProviderOpen(false)}
       />
     )
   }
@@ -426,6 +491,21 @@ export function SettingsPanel({ authService, settingsService, agents, onDefaultA
         <text>
           <span fg={themeColors.text}>{agentRowValue}</span>
           {!pinnedAgent && <span fg={themeColors.textSubtle}> (account)</span>}
+        </text>
+      </box>
+
+      {/* AI Provider (opens a picker) */}
+      <box flexDirection="row" paddingLeft={1}>
+        <text style={{ width: 2 }}>
+          <span fg={selectedIndex === providerRowIndex ? themeColors.primary : themeColors.text}>
+            {selectedIndex === providerRowIndex && !editingField ? '▸' : ' '}
+          </span>
+        </text>
+        <text style={{ width: 18 }}>
+          <span fg={selectedIndex === providerRowIndex ? themeColors.primary : themeColors.text}>AI Provider:</span>
+        </text>
+        <text>
+          <span fg={themeColors.text}>{providerRowValue}</span>
         </text>
       </box>
 
