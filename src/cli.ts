@@ -1,3 +1,4 @@
+import type { RunOptions } from './run'
 import type { Services } from './services'
 import { Command } from 'commander'
 import pkg from '../package.json'
@@ -6,6 +7,7 @@ export const CLI_VERSION = pkg.version
 
 export type ParsedCommand
   = | { type: 'chat', continue?: boolean }
+    | { type: 'run', message: string[], options: RunOptions }
     | { type: 'auth:login', token: string, apiUrl?: string }
     | { type: 'auth:logout' }
     | { type: 'auth:status' }
@@ -28,6 +30,14 @@ export function createProgram(): Command {
   program
     .command('chat', { isDefault: true })
     .description('Start the interactive chat')
+
+  program
+    .command('run')
+    .description('Run with a message (non-interactive)')
+    .argument('[message...]', 'Message to send')
+    .option('-a, --agent <name>', 'Agent to use')
+    .option('-c, --continue', 'Continue the last conversation')
+    .option('-s, --session <id>', 'Conversation ID to continue')
 
   const auth = program
     .command('auth')
@@ -86,6 +96,18 @@ export function parseArgs(): ParsedCommand {
   // Override actions to capture context
   program.commands.find(c => c.name() === 'chat')?.action(() => {
     result = { type: 'chat' }
+  })
+
+  program.commands.find(c => c.name() === 'run')?.action((message: string[], opts) => {
+    result = {
+      type: 'run',
+      message,
+      options: {
+        agent: opts.agent,
+        continue: opts.continue,
+        session: opts.session,
+      },
+    }
   })
 
   const authCmd = program.commands.find(c => c.name() === 'auth')
@@ -243,6 +265,12 @@ export async function executeCommand(command: ParsedCommand, services: Services)
         dryRun: command.dryRun,
         force: command.force,
       })
+      return true
+    }
+
+    case 'run': {
+      const { runCommand } = await import('./run')
+      await runCommand(command.message, command.options, services)
       return true
     }
 
