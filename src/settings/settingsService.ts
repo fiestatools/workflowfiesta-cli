@@ -1,12 +1,9 @@
 import type { ApiClient } from '../api'
 
-/** Shape returned by `GET /external/me`. */
 interface MeResponse {
   orgId: string
-  /** Added in a later backend version; absent when talking to an older server. */
   orgName?: string | null
   defaultAgentId: string | null
-  /** Added in a later backend version; absent when talking to an older server. */
   user?: { email: string, name: string | null } | null
   token: {
     uid: string
@@ -15,24 +12,64 @@ interface MeResponse {
   }
 }
 
-/**
- * The caller's identity behind the current access token, for the settings
- * account section.
- */
+export type ProviderType = 'anthropic' | 'aws_bedrock' | 'openai' | 'ollama'
+
+export const PROVIDER_TYPE_LABELS: Record<ProviderType, string> = {
+  anthropic: 'Anthropic',
+  aws_bedrock: 'AWS Bedrock',
+  openai: 'OpenAI',
+  ollama: 'Ollama',
+}
+
+export interface ProviderSummary {
+  uid: string
+  name: string
+  type: ProviderType
+  isDefault: boolean
+}
+
+export interface AnthropicProviderConfig {
+  type: 'anthropic'
+  name: string
+  apiKey: string
+}
+
+export interface OpenAIProviderConfig {
+  type: 'openai'
+  name: string
+  apiKey: string
+  /** Optional base URL for proxies or Azure OpenAI */
+  baseUrl?: string
+}
+
+export interface AWSBedrockProviderConfig {
+  type: 'aws_bedrock'
+  name: string
+  region: string
+  accessKeyId: string
+  secretAccessKey: string
+}
+
+export interface OllamaProviderConfig {
+  type: 'ollama'
+  name: string
+  /** Base URL, e.g. http://localhost:11434 */
+  baseUrl: string
+}
+
+export type CreateProviderConfig
+  = | AnthropicProviderConfig
+    | OpenAIProviderConfig
+    | AWSBedrockProviderConfig
+    | OllamaProviderConfig
+
 export interface Identity {
-  /** Org (tenant) the token is scoped to — a UID. */
   orgId: string
-  /** Human-friendly org name, or `null` when the server doesn't provide it. */
   orgName: string | null
-  /** Account default agent (used when no local pin is set). */
   defaultAgentId: string | null
-  /** Email of the human who created the token, or `null` when unavailable. */
   userEmail: string | null
-  /** Full name of the token creator, or `null` when unavailable. */
   userName: string | null
-  /** Human-friendly name of the access token in use. */
   tokenName: string
-  /** ISO-8601 token expiry, or empty string when unknown. */
   tokenExpiresAt: string
 }
 
@@ -56,5 +93,17 @@ export class SettingsService {
       tokenName: me.token?.name ?? '',
       tokenExpiresAt: me.token?.expiresAt ?? '',
     }
+  }
+
+  async listProviders(): Promise<ProviderSummary[]> {
+    return this.api.get<ProviderSummary[]>('/external/providers')
+  }
+
+  async setDefaultProvider(providerId: string): Promise<void> {
+    await this.api.post(`/external/providers/${providerId}/set-default`)
+  }
+
+  async createProvider(config: CreateProviderConfig): Promise<ProviderSummary> {
+    return this.api.post<ProviderSummary>('/external/providers', { body: config })
   }
 }

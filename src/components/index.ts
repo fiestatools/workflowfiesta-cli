@@ -7,7 +7,8 @@ export type { AccessTokenCardProps } from './AccessTokenCard'
 export { AccessTokenRevealOverlay } from './AccessTokenRevealOverlay'
 
 export type { AccessTokenRevealOverlayProps } from './AccessTokenRevealOverlay'
-// Overlays
+export { AddProviderForm } from './AddProviderForm'
+export type { AddProviderFormProps } from './AddProviderForm'
 export { AgentPicker } from './AgentPicker'
 
 export type { AgentPickerProps } from './AgentPicker'
@@ -62,7 +63,12 @@ export { OverlayContainer } from './OverlayContainer'
 export type { OverlayContainerProps } from './OverlayContainer'
 export { PasswordInput } from './PasswordInput'
 export type { PasswordInputProps } from './PasswordInput'
-// Interactive request forms
+export { PROVIDER_FIELDS, ProviderConfigForm } from './ProviderConfigForm'
+export type { ProviderConfigFormProps, ProviderFieldDef } from './ProviderConfigForm'
+export { ProviderPicker } from './ProviderPicker'
+export type { ProviderPickerProps } from './ProviderPicker'
+export { PROVIDER_TYPES, ProviderTypeSelector } from './ProviderTypeSelector'
+export type { ProviderTypeSelectorProps } from './ProviderTypeSelector'
 export { RequestOverlay } from './RequestOverlay'
 export type { RequestOverlayProps } from './RequestOverlay'
 export { SelectableRow } from './SelectableRow'
