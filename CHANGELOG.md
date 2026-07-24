@@ -1,5 +1,11 @@
 # @workflowfiesta/cli
 
+## 0.12.0
+
+### Minor Changes
+
+- [#70](https://github.com/fiestatools/workflowfiesta-cli/pull/70) [`4cde6f0`](https://github.com/fiestatools/workflowfiesta-cli/commit/4cde6f0a7ed7c5e1cecc2fd6b72b52ab4cd60306) Thanks [@awaitimport](https://github.com/awaitimport)! - Fix CLI unknown command handling, delete chat sub-command
+
 ## 0.11.0
 
 ### Minor Changes
