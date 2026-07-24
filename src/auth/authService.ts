@@ -1,14 +1,12 @@
 import type { ApiClient } from '../api/apiClient'
 import type { TokenProvider } from '../api/types'
-import type { CredentialStore } from './credentialStore'
+import type { CredentialStore, StoredAccount } from './credentialStore'
 import { createHash } from 'node:crypto'
 import { UnauthorizedError } from '../api/errors'
 import { logger } from '../logger'
 
-/** Whether an access token is currently stored. */
 export type AuthStatus = 'signedIn' | 'signedOut'
 
-/** Payload emitted whenever the authentication state changes. */
 export interface AuthStateChange {
   status: AuthStatus
 }
@@ -121,12 +119,14 @@ export class AuthService implements TokenProvider {
    *
    * @param rawToken - The access token to validate and store
    * @param apiUrlOverride - Optional custom API URL (for self-hosted instances)
+   * @param accountName - Optional account name for multi-account support
+   * @param skipValidation - Skip token validation (for testing only)
    * @throws {UnauthorizedError} if the token is rejected
    * @throws {ApiError | NetworkError} if validation could not complete
    * @throws {Error} if the token is empty
    */
-  async signIn(rawToken: string, apiUrlOverride?: string): Promise<void> {
-    logger.debug('signIn', { hasToken: !!rawToken, hasApiUrlOverride: !!apiUrlOverride })
+  async signIn(rawToken: string, apiUrlOverride?: string, accountName?: string, skipValidation?: boolean): Promise<void> {
+    logger.debug('signIn', { hasToken: !!rawToken, hasApiUrlOverride: !!apiUrlOverride, accountName, skipValidation })
     const token = rawToken.trim()
     if (!token) {
       throw new Error('Access token must not be empty.')
@@ -137,6 +137,30 @@ export class AuthService implements TokenProvider {
       )
     }
 
+    if (accountName) {
+      await this.credentialStore.setAccount({
+        name: accountName,
+        token,
+        apiUrlOverride,
+      })
+
+      await this.credentialStore.switchAccount(accountName)
+
+      if (!skipValidation) {
+        try {
+          await this.validateToken(token)
+        }
+        catch (err) {
+          await this.credentialStore.removeAccount(accountName)
+          throw err
+        }
+      }
+
+      await this.emitState()
+      return
+    }
+
+    // Legacy single-account mode
     // Store the API URL override first (if provided) so validation uses it.
     if (apiUrlOverride) {
       await this.credentialStore.setApiUrlOverride(apiUrlOverride)
@@ -145,25 +169,51 @@ export class AuthService implements TokenProvider {
       await this.credentialStore.clearApiUrlOverride()
     }
 
-    try {
-      await this.validateToken(token)
-    }
-    catch (err) {
-      // Rollback the API URL override on validation failure.
-      await this.credentialStore.clearApiUrlOverride()
-      throw err
+    if (!skipValidation) {
+      try {
+        await this.validateToken(token)
+      }
+      catch (err) {
+        await this.credentialStore.clearApiUrlOverride()
+        throw err
+      }
     }
 
     await this.credentialStore.setToken(token)
     await this.emitState()
   }
 
-  /** Remove the stored token and any API URL override. No-op if already signed out. */
   async signOut(): Promise<void> {
     logger.debug('signOut')
     await this.credentialStore.clearToken()
     await this.credentialStore.clearApiUrlOverride()
     await this.emitState()
+  }
+
+  async getAccounts(): Promise<StoredAccount[]> {
+    return this.credentialStore.getAccounts()
+  }
+
+  async getActiveAccountName(): Promise<string | undefined> {
+    return this.credentialStore.getActiveAccountName()
+  }
+
+  async switchAccount(name: string): Promise<boolean> {
+    logger.debug('switchAccount', { name })
+    const success = await this.credentialStore.switchAccount(name)
+    if (success) {
+      await this.emitState()
+    }
+    return success
+  }
+
+  async removeAccount(name: string): Promise<boolean> {
+    logger.debug('removeAccount', { name })
+    const success = await this.credentialStore.removeAccount(name)
+    if (success) {
+      await this.emitState()
+    }
+    return success
   }
 
   /**
@@ -208,5 +258,4 @@ export class AuthService implements TokenProvider {
   }
 }
 
-// Re-exported for callers that branch on the auth failure type.
 export { UnauthorizedError }

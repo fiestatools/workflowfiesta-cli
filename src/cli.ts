@@ -8,9 +8,12 @@ export const CLI_VERSION = pkg.version
 export type ParsedCommand
   = | { type: 'chat', continue?: boolean }
     | { type: 'run', message: string[], options: RunOptions }
-    | { type: 'auth:login', token: string, apiUrl?: string }
+    | { type: 'auth:login', token: string, apiUrl?: string, name?: string, skipValidation?: boolean }
     | { type: 'auth:logout' }
     | { type: 'auth:status' }
+    | { type: 'auth:list' }
+    | { type: 'auth:switch', name: string }
+    | { type: 'auth:remove', name: string }
     | { type: 'config:list' }
     | { type: 'config:get', key: string }
     | { type: 'config:set', key: string, value: string }
@@ -25,6 +28,8 @@ const COMMAND_SUGGESTIONS: Record<string, string> = {
   'signout': 'wf auth logout',
   'sign-in': 'wf auth login --token <your-token>',
   'sign-out': 'wf auth logout',
+  'accounts': 'wf auth list',
+  'switch': 'wf auth switch <account-name>',
   'set': 'wf config set <key> <value>',
   'get': 'wf config get <key>',
   'list': 'wf config list',
@@ -67,6 +72,8 @@ export function createProgram(): Command {
     .description('Sign in with your access token')
     .requiredOption('-t, --token <token>', 'Access token from WorkflowFiesta web app')
     .option('-u, --api-url <url>', 'API URL for self-hosted instances')
+    .option('-n, --name <name>', 'Account name (e.g., "prod", "staging", "local")')
+    .option('--skip-validation', 'Skip token validation (for testing only)')
 
   auth
     .command('logout')
@@ -75,6 +82,20 @@ export function createProgram(): Command {
   auth
     .command('status')
     .description('Show current authentication status')
+
+  auth
+    .command('list')
+    .alias('ls')
+    .description('List all stored accounts')
+
+  auth
+    .command('switch <name>')
+    .description('Switch to a different account')
+
+  auth
+    .command('remove <name>')
+    .alias('rm')
+    .description('Remove a stored account')
 
   const config = program
     .command('config')
@@ -134,13 +155,22 @@ export function parseArgs(): ParsedCommand {
 
   const authCmd = program.commands.find(c => c.name() === 'auth')
   authCmd?.commands.find(c => c.name() === 'login')?.action((opts) => {
-    result = { type: 'auth:login', token: opts.token, apiUrl: opts.apiUrl }
+    result = { type: 'auth:login', token: opts.token, apiUrl: opts.apiUrl, name: opts.name, skipValidation: opts.skipValidation }
   })
   authCmd?.commands.find(c => c.name() === 'logout')?.action(() => {
     result = { type: 'auth:logout' }
   })
   authCmd?.commands.find(c => c.name() === 'status')?.action(() => {
     result = { type: 'auth:status' }
+  })
+  authCmd?.commands.find(c => c.name() === 'list')?.action(() => {
+    result = { type: 'auth:list' }
+  })
+  authCmd?.commands.find(c => c.name() === 'switch')?.action((name) => {
+    result = { type: 'auth:switch', name }
+  })
+  authCmd?.commands.find(c => c.name() === 'remove')?.action((name) => {
+    result = { type: 'auth:remove', name }
   })
 
   const configCmd = program.commands.find(c => c.name() === 'config')
@@ -210,8 +240,13 @@ export async function executeCommand(command: ParsedCommand, services: Services)
         process.exit(1)
       }
       try {
-        await services.auth.signIn(command.token, command.apiUrl)
-        console.log('✓ Successfully signed in!')
+        await services.auth.signIn(command.token, command.apiUrl, command.name, command.skipValidation)
+        if (command.name) {
+          console.log(`✓ Successfully signed in as "${command.name}"!`)
+        }
+        else {
+          console.log('✓ Successfully signed in!')
+        }
         process.exit(0)
       }
       catch (error) {
@@ -232,13 +267,82 @@ export async function executeCommand(command: ParsedCommand, services: Services)
       const isAuth = await services.auth.isAuthenticated()
       if (isAuth) {
         const fingerprint = await services.auth.getAccountFingerprint()
-        console.log(`✓ Signed in (account: ${fingerprint})`)
+        const accountName = await services.auth.getActiveAccountName()
+        if (accountName) {
+          console.log(`✓ Signed in as "${accountName}" (account: ${fingerprint})`)
+        }
+        else {
+          console.log(`✓ Signed in (account: ${fingerprint})`)
+        }
       }
       else {
         console.log('✗ Not signed in.')
         console.log('  Run: wf auth login --token <your-token>')
       }
       process.exit(0)
+      return true
+    }
+
+    case 'auth:list': {
+      const accounts = await services.auth.getAccounts()
+      const activeAccount = await services.auth.getActiveAccountName()
+
+      if (accounts.length === 0) {
+        console.log('No accounts configured.')
+        console.log('  Run: wf auth login --token <your-token> --name <account-name>')
+        process.exit(0)
+        return true
+      }
+
+      console.log('Accounts:')
+      for (const account of accounts) {
+        const isActive = account.name === activeAccount
+        const marker = isActive ? '* ' : '  '
+        const urlSuffix = account.apiUrlOverride ? ` (${account.apiUrlOverride})` : ''
+        console.log(`${marker}${account.name}${urlSuffix}`)
+      }
+      console.log('')
+      console.log('  * = active account')
+      console.log('  Switch: wf auth switch <name>')
+      process.exit(0)
+      return true
+    }
+
+    case 'auth:switch': {
+      if (!command.name) {
+        console.error('Error: account name is required')
+        console.error('Usage: wf auth switch <account-name>')
+        process.exit(1)
+      }
+      const success = await services.auth.switchAccount(command.name)
+      if (success) {
+        console.log(`✓ Switched to account "${command.name}"`)
+        process.exit(0)
+      }
+      else {
+        console.error(`✗ Account "${command.name}" not found.`)
+        console.error('  Run: wf auth list')
+        process.exit(1)
+      }
+      return true
+    }
+
+    case 'auth:remove': {
+      if (!command.name) {
+        console.error('Error: account name is required')
+        console.error('Usage: wf auth remove <account-name>')
+        process.exit(1)
+      }
+      const success = await services.auth.removeAccount(command.name)
+      if (success) {
+        console.log(`✓ Removed account "${command.name}"`)
+        process.exit(0)
+      }
+      else {
+        console.error(`✗ Account "${command.name}" not found.`)
+        console.error('  Run: wf auth list')
+        process.exit(1)
+      }
       return true
     }
 

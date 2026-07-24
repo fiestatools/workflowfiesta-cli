@@ -1,3 +1,4 @@
+import type { StoredAccount } from '../auth'
 import type { Services } from '../services'
 import type { OverlayKind } from './ChatView'
 import { useKeyboard } from '@opentui/react'
@@ -11,7 +12,6 @@ export interface ChatInterfaceProps {
   continueLastSession?: boolean
 }
 
-/** Main chat interface with keyboard shortcuts and state management. */
 export function ChatInterface({ services, continueLastSession }: ChatInterfaceProps) {
   const state = useChatState(services.chatService)
   const {
@@ -27,6 +27,9 @@ export function ChatInterface({ services, continueLastSession }: ChatInterfacePr
   const [settingsVisible, setSettingsVisible] = useState(false)
   const [overlay, setOverlay] = useState<OverlayKind>(null)
 
+  const [accounts, setAccounts] = useState<StoredAccount[]>([])
+  const [activeAccountName, setActiveAccountName] = useState<string | undefined>()
+
   const { updateInfo, patchInstalled, dismiss: dismissUpdateNotification } = useAutoUpgrade()
 
   const toggleSidePanel = () => setSidePanelVisible(prev => !prev)
@@ -41,6 +44,21 @@ export function ChatInterface({ services, continueLastSession }: ChatInterfacePr
   }
   const clearChat = () => services.chatService.clearChat()
   const retry = () => services.chatService.retryLastMessage()
+
+  const loadAccounts = async () => {
+    const accountList = await services.auth.getAccounts()
+    const activeName = await services.auth.getActiveAccountName()
+    setAccounts(accountList)
+    setActiveAccountName(activeName)
+  }
+
+  const handleSwitchAccount = async (name: string) => {
+    const success = await services.auth.switchAccount(name)
+    if (success) {
+      await loadAccounts()
+      await services.chatService.initialize()
+    }
+  }
 
   // Global shortcuts. A command overlay or a parked interactive request is modal:
   // it owns the keyboard, so the panel/settings toggles are suppressed while one
@@ -94,6 +112,7 @@ export function ChatInterface({ services, continueLastSession }: ChatInterfacePr
   useEffect(() => {
     const init = async () => {
       await services.chatService.initialize()
+      await loadAccounts()
       if (continueLastSession) {
         await services.chatService.continueLastConversation()
       }
@@ -129,6 +148,9 @@ export function ChatInterface({ services, continueLastSession }: ChatInterfacePr
       updateInfo={updateInfo}
       patchInstalled={patchInstalled}
       onDismissUpdate={dismissUpdateNotification}
+      accounts={accounts}
+      activeAccountName={activeAccountName}
+      onSwitchAccount={handleSwitchAccount}
     />
   )
 }

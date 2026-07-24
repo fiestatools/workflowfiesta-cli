@@ -112,7 +112,7 @@ export function AuthLoginDialog({ authService, onSuccess, onCancel }: AuthLoginP
               value={apiUrl}
               onInput={setApiUrl}
               onSubmit={handleSubmit as InputProps['onSubmit']}
-              placeholder="https://api.example.com"
+              placeholder="https://api.workflowfiesta.com"
               flexGrow={1}
               focused={activeField === 'apiUrl'}
             />
