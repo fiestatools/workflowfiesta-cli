@@ -17,6 +17,29 @@ export type ParsedCommand
     | { type: 'upgrade', target?: string, method?: 'curl' | 'brew' }
     | { type: 'uninstall', keepData: boolean, dryRun: boolean, force: boolean }
 
+const COMMAND_SUGGESTIONS: Record<string, string> = {
+  'login': 'wf auth login --token <your-token>',
+  'logout': 'wf auth logout',
+  'status': 'wf auth status',
+  'signin': 'wf auth login --token <your-token>',
+  'signout': 'wf auth logout',
+  'sign-in': 'wf auth login --token <your-token>',
+  'sign-out': 'wf auth logout',
+  'set': 'wf config set <key> <value>',
+  'get': 'wf config get <key>',
+  'list': 'wf config list',
+}
+
+function printUnknownCommandError(command: string): void {
+  const suggestion = COMMAND_SUGGESTIONS[command.toLowerCase()]
+  console.error(`error: Unknown command '${command}'.`)
+  if (suggestion) {
+    console.error(`\nDid you mean: ${suggestion}`)
+  }
+  console.error(`\nRun 'wf --help' for usage information.`)
+  process.exit(1)
+}
+
 export function createProgram(): Command {
   const program = new Command()
 
@@ -25,11 +48,7 @@ export function createProgram(): Command {
     .description('WorkflowFiesta CLI - AI Agents for Your Entire Business')
     .version(CLI_VERSION)
     .option('-c, --continue', 'Resume the last conversation')
-
-  // Chat command (default)
-  program
-    .command('chat', { isDefault: true })
-    .description('Start the interactive chat')
+    .allowExcessArguments(true)
 
   program
     .command('run')
@@ -93,8 +112,11 @@ export function parseArgs(): ParsedCommand {
 
   let result: ParsedCommand = { type: 'chat' }
 
-  // Override actions to capture context
-  program.commands.find(c => c.name() === 'chat')?.action(() => {
+  program.action(function (this: Command) {
+    if (this.args.length > 0) {
+      // User passed arguments without a valid command (e.g., "wf login")
+      printUnknownCommandError(this.args[0] as string)
+    }
     result = { type: 'chat' }
   })
 
@@ -150,13 +172,22 @@ export function parseArgs(): ParsedCommand {
     }
   })
 
-  // Parse arguments
+  program.showHelpAfterError(false)
+  program.exitOverride()
+  program.configureOutput({ writeErr: () => {} })
+
   try {
     program.parse()
   }
-  catch {
-    // Commander handles --help and --version
-    process.exit(0)
+  catch (err: unknown) {
+    const error = err as { code?: string, message?: string }
+    if (error.code === 'commander.helpDisplayed' || error.code === 'commander.version') {
+      process.exit(0)
+    }
+    if (error.message) {
+      console.error(error.message)
+    }
+    process.exit(1)
   }
 
   if (result.type === 'chat') {
