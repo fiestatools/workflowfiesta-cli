@@ -77,6 +77,11 @@ export const BUILTIN_COMMANDS: Command[] = [
     description: 'Switch AI model',
     category: 'settings',
   },
+  {
+    name: 'account',
+    description: 'Switch between accounts',
+    category: 'settings',
+  },
 
   // Navigation commands
   {

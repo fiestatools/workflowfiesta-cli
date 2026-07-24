@@ -1,9 +1,10 @@
-import type { AuthService } from '../auth'
+import type { AuthService, StoredAccount } from '../auth'
 import type { ChatService, ChatState } from '../chat'
 import type { Command } from '../commands'
 import type { UpdateInfo } from '../installation'
 import type { SettingsService } from '../settings'
 import { AccessTokenRevealOverlay } from './AccessTokenRevealOverlay'
+import { AccountPicker } from './AccountPicker'
 import { AgentPicker } from './AgentPicker'
 import { CommandPalette } from './CommandPalette'
 import { Header } from './Header'
@@ -19,7 +20,7 @@ import { StatusDialog } from './StatusDialog'
 import { UpdateNotification } from './UpdateNotification'
 
 /** Which command-triggered overlay is currently open, if any. */
-export type OverlayKind = 'agent' | 'help' | 'history' | 'status' | null
+export type OverlayKind = 'agent' | 'account' | 'help' | 'history' | 'status' | null
 
 /** Main chat view component props. */
 export interface ChatViewProps {
@@ -55,6 +56,12 @@ export interface ChatViewProps {
   patchInstalled?: string | null
   /** Callback to dismiss the update notification. */
   onDismissUpdate?: () => void
+  /** List of available accounts for switching. */
+  accounts?: StoredAccount[]
+  /** Name of the currently active account. */
+  activeAccountName?: string
+  /** Callback when user selects a different account. */
+  onSwitchAccount?: (accountName: string) => void
 }
 
 /** Main chat view layout. */
@@ -85,6 +92,9 @@ export function ChatView({
   updateInfo,
   patchInstalled,
   onDismissUpdate,
+  accounts = [],
+  activeAccountName,
+  onSwitchAccount,
 }: ChatViewProps) {
   // The interactive request (if any) the run is parked on takes over the input.
   const activeRequest = state.pendingRequests[0]
@@ -97,7 +107,6 @@ export function ChatView({
     // Clear the input after command execution
     onInputChange('')
 
-    // Execute the command
     switch (command.name) {
       case 'rename':
         chatService.renameCurrentConversation(args)
@@ -116,6 +125,9 @@ export function ChatView({
         break
       case 'agent':
         onOpenOverlay('agent')
+        break
+      case 'account':
+        onOpenOverlay('account')
         break
       case 'help':
         onOpenOverlay('help')
@@ -213,6 +225,17 @@ export function ChatView({
             agents={state.agents}
             currentAgentId={state.currentAgent?.uid}
             onSelect={uid => chatService.selectAgent(uid)}
+            onClose={onCloseOverlay}
+          />
+        )}
+        {!activeRequest && !reveal && overlay === 'account' && (
+          <AccountPicker
+            accounts={accounts}
+            activeAccountName={activeAccountName}
+            onSelect={(name) => {
+              onSwitchAccount?.(name)
+              onCloseOverlay()
+            }}
             onClose={onCloseOverlay}
           />
         )}

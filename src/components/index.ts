@@ -7,6 +7,8 @@ export type { AccessTokenCardProps } from './AccessTokenCard'
 export { AccessTokenRevealOverlay } from './AccessTokenRevealOverlay'
 
 export type { AccessTokenRevealOverlayProps } from './AccessTokenRevealOverlay'
+export { AccountPicker } from './AccountPicker'
+export type { AccountPickerProps } from './AccountPicker'
 export { AddProviderForm } from './AddProviderForm'
 export type { AddProviderFormProps } from './AddProviderForm'
 export { AgentPicker } from './AgentPicker'
