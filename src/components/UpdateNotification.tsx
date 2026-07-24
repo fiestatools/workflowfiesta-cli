@@ -85,16 +85,18 @@ export function UpdateNotification({
         paddingY={0}
       >
         <box flexGrow={1} flexDirection="column" justifyContent="center">
+          {/* Nested styled runs must be <span>, not <text> — OpenTUI TextNode only
+              accepts strings / TextNodeRenderable / StyledText as children. */}
           <text fg={themeColors.text}>
-            <text fg={borderColor}>
+            <span fg={borderColor}>
               {isBreaking ? 'Major update' : 'Update available'}
               :
-            </text>
+            </span>
             {' '}
             v
             {updateInfo.currentVersion}
             {' '}
-            <text fg={themeColors.textMuted}>-&gt;</text>
+            <span fg={themeColors.textMuted}>-&gt;</span>
             {' '}
             v
             {updateInfo.latestVersion}
@@ -104,7 +106,7 @@ export function UpdateNotification({
           <text fg={themeColors.textMuted}>
             Run
             {' '}
-            <text fg={themeColors.primary}>wf upgrade</text>
+            <span fg={themeColors.primary}>wf upgrade</span>
             {' '}
             | [d] dismiss
           </text>
