@@ -1,5 +1,11 @@
 # @workflowfiesta/cli
 
+## 0.13.0
+
+### Minor Changes
+
+- [#72](https://github.com/fiestatools/workflowfiesta-cli/pull/72) [`bb553df`](https://github.com/fiestatools/workflowfiesta-cli/commit/bb553df6111cdff097e14a315f4148b189c66400) Thanks [@awaitimport](https://github.com/awaitimport)! - Add multi account support with backward compatibility for older account storing format and migration
+
 ## 0.12.0
 
 ### Minor Changes
