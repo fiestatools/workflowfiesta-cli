@@ -72,9 +72,10 @@ export function SettingsPanel({ authService, settingsService, agents, onDefaultA
   const [providers, setProviders] = useState<ProviderSummary[]>([])
   const [message, setMessage] = useState<{ type: 'success' | 'error', text: string } | null>(null)
 
-  // Row layout: editable fields, then the default-agent row, provider row, docs, and (when
+  // Row layout: editable fields, then the v2 harness toggle, the default-agent row, provider row, docs, and (when
   // signed in) sign out.
-  const agentRowIndex = SETTING_FIELDS.length
+  const v2HarnessRowIndex = SETTING_FIELDS.length
+  const agentRowIndex = v2HarnessRowIndex + 1
   const providerRowIndex = agentRowIndex + 1
   const docsIndex = providerRowIndex + 1
   const signOutIndex = docsIndex + 1
@@ -93,7 +94,7 @@ export function SettingsPanel({ authService, settingsService, agents, onDefaultA
       : 'Account default'
 
   /** The current default provider. */
-  const currentProvider = providers.find(p => p.isDefault)
+  const currentProvider = providers?.find(p => p.isDefault)
   const providerRowValue = currentProvider
     ? `${currentProvider.name} (${PROVIDER_TYPE_LABELS[currentProvider.type] ?? currentProvider.type})`
     : 'Not configured'
@@ -206,7 +207,7 @@ export function SettingsPanel({ authService, settingsService, agents, onDefaultA
         isDefault: p.uid === providerId,
       })))
       setProviderPickerOpen(false)
-      const name = providers.find(p => p.uid === providerId)?.name ?? 'provider'
+      const name = providers?.find(p => p.uid === providerId)?.name ?? 'provider'
       setMessage({ type: 'success', text: `Default provider set to ${name}` })
     }
     catch {
@@ -226,6 +227,15 @@ export function SettingsPanel({ authService, settingsService, agents, onDefaultA
     setProviderPickerOpen(false)
     setAddProviderOpen(true)
   }, [])
+
+  /** Toggle the v2 harness setting. */
+  const handleToggleV2Harness = useCallback(() => {
+    const configManager = getConfigManager()
+    const newValue = !config.useV2Harness
+    configManager.setConfig({ useV2Harness: newValue })
+    setConfig(prev => ({ ...prev, useV2Harness: newValue }))
+    setMessage({ type: 'success', text: `V2 Harness ${newValue ? 'enabled' : 'disabled'}` })
+  }, [config.useV2Harness])
 
   const handleSignOut = useCallback(async () => {
     await authService.signOut()
@@ -288,6 +298,9 @@ export function SettingsPanel({ authService, settingsService, agents, onDefaultA
         const field = SETTING_FIELDS[selectedIndex]!
         setEditingField(field.key)
         setEditValue(String(config[field.key] ?? ''))
+      }
+      else if (selectedIndex === v2HarnessRowIndex) {
+        handleToggleV2Harness()
       }
       else if (selectedIndex === agentRowIndex) {
         setAgentPickerOpen(true)
@@ -477,6 +490,24 @@ export function SettingsPanel({ authService, settingsService, agents, onDefaultA
           </box>
         )
       })}
+
+      {/* V2 Harness toggle */}
+      <box flexDirection="row" paddingLeft={1}>
+        <text style={{ width: 2 }}>
+          <span fg={selectedIndex === v2HarnessRowIndex ? themeColors.primary : themeColors.text}>
+            {selectedIndex === v2HarnessRowIndex && !editingField ? '▸' : ' '}
+          </span>
+        </text>
+        <text style={{ width: 18 }}>
+          <span fg={selectedIndex === v2HarnessRowIndex ? themeColors.primary : themeColors.text}>V2 Harness:</span>
+        </text>
+        <text>
+          <span fg={config.useV2Harness ? themeColors.success : themeColors.textMuted}>
+            {config.useV2Harness ? 'Enabled' : 'Disabled'}
+          </span>
+          <span fg={themeColors.textSubtle}> (temporary)</span>
+        </text>
+      </box>
 
       {/* Default agent (opens a picker) */}
       <box flexDirection="row" paddingLeft={1}>

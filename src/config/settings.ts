@@ -261,3 +261,8 @@ export function getConfiguredAgentId(): string | undefined {
   const config = getConfigManager().getConfig()
   return config.agentId?.trim() || undefined
 }
+
+export function isV2HarnessEnabled(): boolean {
+  const config = getConfigManager().getConfig()
+  return config.useV2Harness === true
+}

@@ -10,7 +10,7 @@ import type {
   SpecialMessage,
 } from './runEvents'
 import { ApiError } from '../api/errors'
-import { getConfiguredAgentId } from '../config/settings'
+import { getConfiguredAgentId, isV2HarnessEnabled } from '../config/settings'
 import { parseSpecialMessage } from './runEvents'
 import { RunStream } from './runStream'
 
@@ -214,7 +214,10 @@ export class AgentRunService {
     agentId: string,
     handlers: AgentRunHandlers,
   ): Promise<ActiveRun> {
-    const run = await this.api.post<AgentRunResponse>(`/external/agents/${agentId}/runs`, {
+    const endpoint = isV2HarnessEnabled()
+      ? `/external/agents/${agentId}/runs/v2`
+      : `/external/agents/${agentId}/runs`
+    const run = await this.api.post<AgentRunResponse>(endpoint, {
       prompt,
       conversationUid,
     })

@@ -44,6 +44,13 @@ export const WorkflowfiestaConfigSchema = z.object({
    */
   autoupdate: AutoupdateSchema.optional(),
 
+  /**
+   * Temporary setting to enable the v2 harness endpoint.
+   * When true, routes agent runs to `/external/agents/{id}/runs/v2` instead of `/external/agents/{id}/runs`.
+   * Defaults to false.
+   */
+  useV2Harness: z.boolean().optional().describe('Enable v2 harness endpoint for agent runs (temporary setting, defaults to false)'),
+
   installScriptUrl: z.string().url().optional().describe('URL of the install script for curl-based upgrades'),
   agents: z.record(AgentConfigSchema).optional().describe('Custom agent configurations'),
   commands: z.record(CommandConfigSchema).optional().describe('Custom command configurations'),
@@ -56,6 +63,7 @@ export const LegacyCliConfigSchema = z.object({
   requestTimeoutMs: z.number().positive().int().optional(),
   agentId: z.string().optional(),
   autoupdate: AutoupdateSchema.optional(),
+  useV2Harness: z.boolean().optional(),
   installScriptUrl: z.string().optional(),
 })
 
