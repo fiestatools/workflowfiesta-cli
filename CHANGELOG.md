@@ -1,5 +1,11 @@
 # @workflowfiesta/cli
 
+## 0.13.1
+
+### Patch Changes
+
+- [#74](https://github.com/fiestatools/workflowfiesta-cli/pull/74) [`1daea7d`](https://github.com/fiestatools/workflowfiesta-cli/commit/1daea7d100fbe65170c1f86538763cfe9cd214b8) Thanks [@branflake2267](https://github.com/branflake2267)! - Fix Application Error crash when the update-available banner renders (nested `<text>` → `<span>` for OpenTUI)
+
 ## 0.13.0
 
 ### Minor Changes
