@@ -18,6 +18,9 @@
 ## Installation
 
 ```bash
+# Quick install (macOS and Linux)
+curl -fsSL https://workflowfiesta.com/install-cli | bash
+
 # Homebrew (macOS and Linux)
 brew install fiestatools/tap/workflowfiesta
 
