@@ -6,6 +6,8 @@ on:
       - main
   workflow_dispatch:
 
+run-name: ${{ github.repository == 'fiestatools/workflowfiesta-cli' && 'Release CLI' || 'Skipped (fork)' }}
+
 concurrency: ${{ github.workflow }}-${{ github.ref }}
 
 permissions:
@@ -15,6 +17,7 @@ permissions:
 jobs:
   check-changesets:
     name: Check for changesets
+    if: github.repository == 'fiestatools/workflowfiesta-cli'
     runs-on: ubuntu-latest
     outputs:
       hasChangesets: ${{ steps.check.outputs.hasChangesets }}
@@ -378,11 +381,12 @@ jobs:
         with:
           bun-version: latest
 
-      - name: Generate and push Homebrew formula
+      - name: Generate Homebrew formula and create PR
         env:
           GH_TOKEN: ${{ secrets.GH_CI_TOKEN || github.token }}
         run: |
           VERSION=$(node -p "require('./package.json').version")
+          BRANCH="update-workflowfiesta-v${VERSION}"
 
           # Parse checksums from artifact and export as env vars
           export DARWIN_ARM64_SHA256=$(grep "darwin-arm64" checksums.txt | awk '{print $1}')
@@ -405,35 +409,44 @@ jobs:
             exit 0
           fi
 
-          # Get the SHA of existing file (needed for update)
-          SHA=$(gh api repos/fiestatools/homebrew-tap/contents/Formula/workflowfiesta.rb --jq '.sha' 2>/dev/null || echo "")
+          # Clone the homebrew-tap repo
+          gh repo clone fiestatools/homebrew-tap homebrew-tap
+          cd homebrew-tap
 
-          # Create or update the formula file
-          if [ -n "$SHA" ]; then
-            # Update existing file
-            gh api repos/fiestatools/homebrew-tap/contents/Formula/workflowfiesta.rb \
-              --method PUT \
-              -f message="Update workflowfiesta to v${VERSION}" \
-              -f content="$(base64 -w0 workflowfiesta.rb)" \
-              -f sha="$SHA"
-          else
-            # Create new file
-            gh api repos/fiestatools/homebrew-tap/contents/Formula/workflowfiesta.rb \
-              --method PUT \
-              -f message="Add workflowfiesta v${VERSION}" \
-              -f content="$(base64 -w0 workflowfiesta.rb)"
-          fi
+          # Create a new branch
+          git checkout -b "$BRANCH"
 
-          echo "Homebrew tap updated to v${VERSION}"
+          # Copy the generated formula
+          mkdir -p Formula
+          cp ../workflowfiesta.rb Formula/workflowfiesta.rb
+
+          # Configure git
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+          # Commit and push
+          git add Formula/workflowfiesta.rb
+          git commit -m "Update workflowfiesta to v${VERSION}"
+          git push origin "$BRANCH"
+
+          # Create PR
+          PR_URL=$(gh pr create \
+            --title "Update workflowfiesta to v${VERSION}" \
+            --body "Automated update of the workflowfiesta formula to version ${VERSION}. Created by [release workflow](https://github.com/fiestatools/workflowfiesta-cli/actions/runs/${{ github.run_id }})." \
+            --base main \
+            --head "$BRANCH")
+
+          echo "PR_URL=$PR_URL" >> $GITHUB_ENV
+          echo "Created PR: $PR_URL"
 
       - name: Summary
         run: |
           VERSION=$(node -p "require('./package.json').version")
-          echo "## Homebrew Tap Updated" >> $GITHUB_STEP_SUMMARY
+          echo "## Homebrew Tap PR Created" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-          echo "Formula updated to v${VERSION}" >> $GITHUB_STEP_SUMMARY
+          echo "PR created for v${VERSION}: ${{ env.PR_URL }}" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-          echo "Install with:" >> $GITHUB_STEP_SUMMARY
+          echo "Once merged, install with:" >> $GITHUB_STEP_SUMMARY
           echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
           echo "brew install fiestatools/tap/workflowfiesta" >> $GITHUB_STEP_SUMMARY
           echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
