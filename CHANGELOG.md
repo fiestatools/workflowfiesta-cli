@@ -1,5 +1,11 @@
 # @workflowfiesta/cli
 
+## 0.14.1
+
+### Patch Changes
+
+- [#79](https://github.com/fiestatools/workflowfiesta-cli/pull/79) [`ebfa3d4`](https://github.com/fiestatools/workflowfiesta-cli/commit/ebfa3d4694dad1e7152781df648f51ed4259b8d3) Thanks [@awaitimport](https://github.com/awaitimport)! - Fix displaying v2 harness on settings
+
 ## 0.14.0
 
 ### Minor Changes
