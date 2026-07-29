@@ -120,7 +120,7 @@ export function SettingsPanel({ authService, settingsService, agents, onDefaultA
     const configManager = getConfigManager()
     // Clear cache to ensure fresh read from disk
     configManager.clearCache()
-    setConfig(configManager.getConfig())
+    void configManager.getConfigAsync().then(setConfig)
 
     void authService.isAuthenticated().then(setIsAuthenticated)
     void authService.getAccountFingerprint().then(setAccountFingerprint)
