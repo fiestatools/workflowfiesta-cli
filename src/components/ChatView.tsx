@@ -3,6 +3,7 @@ import type { ChatService, ChatState } from '../chat'
 import type { Command } from '../commands'
 import type { UpdateInfo } from '../installation'
 import type { SettingsService } from '../settings'
+import type { PasteExpandRange } from '../utils/paste-summary'
 import { AccessTokenRevealOverlay } from './AccessTokenRevealOverlay'
 import { AccountPicker } from './AccountPicker'
 import { AgentPicker } from './AgentPicker'
@@ -17,6 +18,7 @@ import { SettingsPanel } from './SettingsPanel'
 import { SidePanel } from './SidePanel'
 import { StatusBar } from './StatusBar'
 import { StatusDialog } from './StatusDialog'
+
 import { UpdateNotification } from './UpdateNotification'
 
 /** Which command-triggered overlay is currently open, if any. */
@@ -27,7 +29,7 @@ export interface ChatViewProps {
   state: ChatState
   input: string
   onInputChange: (value: string) => void
-  onSubmit: () => void
+  onSubmit: (getExtmarkRanges?: () => PasteExpandRange[]) => void
   isSubmitting: boolean
   chatService: ChatService
   version: string

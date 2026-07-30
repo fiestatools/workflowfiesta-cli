@@ -1,13 +1,23 @@
-import type { KeyEvent, TextareaRenderable } from '@opentui/core'
+import type { ExtmarksController, KeyEvent, PasteEvent, TextareaRenderable } from '@opentui/core'
+import type { PasteExpandRange } from '../utils/paste-summary'
+import { decodePasteBytes } from '@opentui/core'
 import { useTerminalDimensions } from '@opentui/react'
-import { useEffect, useRef } from 'react'
+import { useCallback, useEffect, useRef } from 'react'
 import { themeColors } from '../theme'
+import { readFromClipboard } from '../utils/clipboard'
+import {
+  formatPastePlaceholder,
+  normalizeLineEndings,
+  pasteLineCount,
+  shouldSummarizePaste,
+} from '../utils/paste-summary'
+import { promptOffsetWidth } from '../utils/prompt-display'
 
 /** Props for the input area. */
 export interface InputAreaProps {
   value: string
   onChange: (value: string) => void
-  onSubmit: () => void
+  onSubmit: (getExtmarkRanges?: () => PasteExpandRange[]) => void
   isDisabled: boolean
   isStreaming?: boolean
   placeholder?: string
@@ -36,6 +46,11 @@ export function InputArea({
 }: InputAreaProps) {
   const terminalDimensions = useTerminalDimensions()
   const textareaRef = useRef<TextareaRenderable | null>(null)
+
+  // Track paste parts: extmark ID -> original text mapping
+  const pastePartsRef = useRef<Map<number, { originalText: string, placeholderText: string }>>(new Map())
+  // Type ID for paste extmarks (registered once per textarea instance)
+  const pasteTypeIdRef = useRef<number | null>(null)
 
   const getAvailableWidth = () => {
     const width = terminalDimensions.width
@@ -73,13 +88,151 @@ export function InputArea({
     return placeholder ?? 'Type a message... (Enter to send, Shift+Enter for newline)'
   }
 
+  /**
+   * Get the extmarks controller and ensure the paste type is registered.
+   */
+  const getExtmarks = useCallback((): ExtmarksController | null => {
+    const ref = textareaRef.current
+    if (!ref)
+      return null
+
+    const extmarks = ref.extmarks
+    if (!extmarks)
+      return null
+
+    // Register the paste type if not already done
+    if (pasteTypeIdRef.current === null) {
+      pasteTypeIdRef.current = extmarks.registerType('paste')
+    }
+
+    return extmarks
+  }, [])
+
+  /**
+   * Get paste expand ranges from current extmarks.
+   * Used by submit to expand placeholders back to original text.
+   */
+  const getExtmarkRanges = useCallback((): PasteExpandRange[] => {
+    const extmarks = getExtmarks()
+    if (!extmarks || pasteTypeIdRef.current === null)
+      return []
+
+    const ranges: PasteExpandRange[] = []
+    const pasteExtmarks = extmarks.getAllForTypeId(pasteTypeIdRef.current)
+
+    for (const extmark of pasteExtmarks) {
+      const part = pastePartsRef.current.get(extmark.id)
+      if (part) {
+        ranges.push({
+          start: extmark.start,
+          end: extmark.end,
+          text: part.originalText,
+        })
+      }
+    }
+
+    return ranges
+  }, [getExtmarks])
+
+  /**
+   * Insert pasted text with optional summarization.
+   */
+  const pasteInputText = useCallback(async (text: string) => {
+    const ref = textareaRef.current
+    if (!ref)
+      return
+
+    const normalizedText = normalizeLineEndings(text)
+    const trimmedContent = normalizedText.trim()
+
+    if (!trimmedContent)
+      return
+
+    const lineCount = pasteLineCount(trimmedContent)
+
+    // Check if we should summarize
+    if (shouldSummarizePaste(trimmedContent)) {
+      const placeholderText = formatPastePlaceholder(lineCount)
+      const extmarks = getExtmarks()
+
+      if (extmarks && pasteTypeIdRef.current !== null) {
+        // Get current cursor position (we'll insert at the cursor)
+        const cursorOffset = ref.cursorOffset
+
+        // Insert the placeholder text followed by a space
+        ref.insertText(`${placeholderText} `)
+
+        // Create an extmark over the placeholder (not including the trailing space)
+        const extmarkStart = cursorOffset
+        const extmarkEnd = cursorOffset + promptOffsetWidth(placeholderText)
+
+        const extmarkId = extmarks.create({
+          start: extmarkStart,
+          end: extmarkEnd,
+          virtual: true,
+          typeId: pasteTypeIdRef.current,
+        })
+
+        // Store the mapping
+        pastePartsRef.current.set(extmarkId, {
+          originalText: trimmedContent,
+          placeholderText,
+        })
+
+        return
+      }
+    }
+
+    // Short text or no extmarks support - insert verbatim
+    ref.insertText(normalizedText)
+  }, [getExtmarks])
+
+  /**
+   * Handle bracketed paste events from the terminal.
+   */
+  const handlePaste = useCallback((event: PasteEvent) => {
+    if (isDisabled) {
+      event.preventDefault?.()
+      return
+    }
+
+    // Decode raw bytes to string
+    const text = decodePasteBytes(event.bytes)
+
+    // Prevent default paste handling - we'll handle it ourselves
+    event.preventDefault?.()
+
+    void pasteInputText(text)
+  }, [isDisabled, pasteInputText])
+
+  /**
+   * Handle Ctrl+V paste from clipboard (fallback for terminals without bracketed paste).
+   */
+  const handleCtrlVPaste = useCallback(async () => {
+    if (isDisabled)
+      return
+
+    const content = await readFromClipboard()
+    if (content) {
+      await pasteInputText(content)
+    }
+  }, [isDisabled, pasteInputText])
+
   // Sync textarea value when controlled value changes externally (e.g., cleared after submit)
   useEffect(() => {
     const ref = textareaRef.current
     if (ref && ref.plainText !== value) {
       ref.setText(value)
+      // Clear paste parts when the input is cleared externally
+      if (value === '') {
+        pastePartsRef.current.clear()
+        const extmarks = getExtmarks()
+        if (extmarks) {
+          extmarks.clear()
+        }
+      }
     }
-  }, [value])
+  }, [value, getExtmarks])
 
   const handleKeyDown = (event: KeyEvent) => {
     const isEnterEvent = event.name === 'return' || event.name === 'linefeed'
@@ -87,6 +240,14 @@ export function InputArea({
     // Skip history navigation when input is disabled (e.g., dialog/modal is open)
     // This allows dialogs to handle up/down arrow keys for their own navigation
     if (isDisabled) {
+      return
+    }
+
+    // Handle Ctrl+V paste
+    if (event.ctrl && event.name === 'v') {
+      event.preventDefault()
+      event.stopPropagation()
+      void handleCtrlVPaste()
       return
     }
 
@@ -136,7 +297,7 @@ export function InputArea({
       if (!isDisabled && value.trim()) {
         event.preventDefault()
         event.stopPropagation()
-        onSubmit()
+        onSubmit(getExtmarkRanges)
       }
     }
   }
@@ -170,6 +331,7 @@ export function InputArea({
         focused={!isDisabled}
         onContentChange={handleContentChange}
         onKeyDown={handleKeyDown}
+        onPaste={handlePaste}
         textColor={themeColors.text}
         backgroundColor="transparent"
         focusedBackgroundColor="transparent"
