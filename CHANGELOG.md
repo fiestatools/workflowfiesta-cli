@@ -1,5 +1,18 @@
 # @workflowfiesta/cli
 
+## 0.15.0
+
+### Minor Changes
+
+- [#84](https://github.com/fiestatools/workflowfiesta-cli/pull/84) [`06fcb85`](https://github.com/fiestatools/workflowfiesta-cli/commit/06fcb854e56d4dfece1274236491a07494a1098a) Thanks [@awaitimport](https://github.com/awaitimport)! - Add copy to clipboard on message selection
+
+- [#83](https://github.com/fiestatools/workflowfiesta-cli/pull/83) [`e4ea51e`](https://github.com/fiestatools/workflowfiesta-cli/commit/e4ea51e8f88e676d49117f4b81a0490357c31f4e) Thanks [@DevAdedeji](https://github.com/DevAdedeji)! - Set the terminal window/tab title to the active conversation
+
+  - The title follows the active conversation as `WF - <conversation title>`, so multiple `wf` tabs are easy to tell apart. A chat with no title yet shows a bare `WF`, and the title is cleared again when the CLI exits
+  - Pass `--title <title>` to pin a fixed title for the session instead of following the conversation
+  - Turn it off from the Settings panel (**Terminal title**), the `terminalTitle` config key, or the `WORKFLOWFIESTA_DISABLE_TERMINAL_TITLE` env var — the config key takes precedence over the env var
+  - Titles are set with an OSC escape sequence, wrapped in tmux's passthrough when running inside tmux
+
 ## 0.14.1
 
 ### Patch Changes
