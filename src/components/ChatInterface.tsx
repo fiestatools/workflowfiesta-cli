@@ -13,10 +13,10 @@ import { ChatView, useChatState, useInput } from './index'
 export interface ChatInterfaceProps {
   services: Services
   continueLastSession?: boolean
-  explicitTitle?: string
+  terminalTitle?: string
 }
 
-export function ChatInterface({ services, continueLastSession, explicitTitle }: ChatInterfaceProps) {
+export function ChatInterface({ services, continueLastSession, terminalTitle }: ChatInterfaceProps) {
   const state = useChatState(services.chatService)
   const {
     input,
@@ -42,7 +42,7 @@ export function ChatInterface({ services, continueLastSession, explicitTitle }: 
   }, [])
   useTerminalTitle({
     enabled: terminalTitleEnabled,
-    explicitTitle,
+    terminalTitle,
     conversationTitle: state.title,
   })
 

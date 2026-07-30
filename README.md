@@ -71,9 +71,9 @@ Run `/settings` (or `Ctrl+S`) to open the settings panel. It shows:
 
 ### Terminal Title
 
-The CLI sets your terminal window/tab title to the active conversation's title, so multiple `wf` tabs are easy to tell apart. It clears the title again when it exits.
+The CLI sets your terminal window/tab title to `WF - <conversation title>`, so multiple `wf` tabs are easy to tell apart. A chat with no title yet shows just `WF`, and the title is cleared again when the CLI exits.
 
-- Pass `--title <title>` to set a fixed title for the session instead of following the conversation.
+- Pass `--title <title>` to set a fixed title for the session instead of following the conversation. The `WF - ` prefix still applies.
 - Disable it with the `WORKFLOWFIESTA_DISABLE_TERMINAL_TITLE` env var, or the `terminalTitle` config key (which takes precedence over the env var). The Settings panel toggles the config key.
 
 ### Conversation History

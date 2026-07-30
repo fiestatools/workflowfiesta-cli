@@ -24,8 +24,8 @@ async function main(): Promise<void> {
   }
 
   const continueLastSession = command.type === 'chat' && command.continue
-  const explicitTitle = command.type === 'chat' ? command.title : undefined
-  await startApp(services, { continueLastSession, explicitTitle })
+  const terminalTitle = command.type === 'chat' ? command.title : undefined
+  await startApp(services, { continueLastSession, terminalTitle })
 }
 
 main().catch((error) => {
