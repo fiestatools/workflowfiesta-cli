@@ -1,5 +1,20 @@
 # @workflowfiesta/cli
 
+## 0.16.0
+
+### Minor Changes
+
+- [#89](https://github.com/fiestatools/workflowfiesta-cli/pull/89) [`a3d9fc8`](https://github.com/fiestatools/workflowfiesta-cli/commit/a3d9fc8d072d8444e110018e653ddfe4ea952f32) Thanks [@awaitimport](https://github.com/awaitimport)! - Collapse large pastes on chat input and expand on send
+
+### Patch Changes
+
+- [#87](https://github.com/fiestatools/workflowfiesta-cli/pull/87) [`c3c1a6f`](https://github.com/fiestatools/workflowfiesta-cli/commit/c3c1a6f41bd467da9110ba98da383637708e6f4d) Thanks [@DevAdedeji](https://github.com/DevAdedeji)! - Fix the slash command palette hiding matches and not scrolling
+
+  - The palette was one row shorter than its contents, so the last row was clipped — typing `/his` showed the "Navigation" heading with no `/history` under it. Narrow matches now render in full
+  - Arrowing past the last visible row scrolls the list to follow the selection, instead of moving the highlight out of sight
+  - Custom commands from config now appear on a bare `/`, which previously listed built-in commands only
+  - Selection follows the grouped order shown on screen, so the highlighted command is always the one that runs
+
 ## 0.15.0
 
 ### Minor Changes
