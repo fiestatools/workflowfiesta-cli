@@ -6,8 +6,8 @@ import { useEffect, useState } from 'react'
 import { CLI_VERSION } from '../cli'
 import { getConfigManager } from '../config'
 import { useAutoUpgrade } from '../hooks/useAutoUpgrade'
-import { copySelection } from '../utils/selection'
 import { useTerminalTitle } from '../hooks/useTerminalTitle'
+import { copySelection } from '../utils/selection'
 import { isTerminalTitleEnabled } from '../utils/terminalTitle'
 import { ChatView, useChatState, useInput } from './index'
 
@@ -41,11 +41,13 @@ export function ChatInterface({ services, continueLastSession, terminalTitle }: 
   // Auto-copy text to clipboard when selection completes (mouse-up after drag)
   useSelectionHandler(() => {
     void copySelection(renderer)
+  })
+
   const [terminalTitleEnabled, setTerminalTitleEnabled] = useState(true)
   useEffect(() => {
     void getConfigManager().getConfigAsync().then(cfg => setTerminalTitleEnabled(isTerminalTitleEnabled(cfg)))
   }, [])
-    
+
   useTerminalTitle({
     enabled: terminalTitleEnabled,
     terminalTitle,
