@@ -81,6 +81,7 @@ export interface ChatState {
   pendingReveal?: AccessTokenRevealEvent
   /** Backend UID of the active conversation thread, once one exists. */
   conversationUid?: string
+  title?: string
 }
 
 /**
@@ -176,6 +177,7 @@ export class ChatService {
       isTyping: true,
       isConnecting: true,
       error: undefined,
+      title: this.currentTitle,
     })
 
     // Clean up previous run
@@ -335,6 +337,7 @@ export class ChatService {
       pendingRequests: [],
       pendingReveal: undefined,
       conversationUid: undefined,
+      title: undefined,
     })
   }
 
@@ -367,6 +370,7 @@ export class ChatService {
     this.conversationStore.rename(uid, trimmed)
     if (this.conversationUid === uid) {
       this.currentTitle = trimmed
+      this.updateState({ title: trimmed })
     }
   }
 
@@ -407,6 +411,7 @@ export class ChatService {
       currentAgent,
       pendingRequests: [],
       conversationUid: uid,
+      title: this.currentTitle,
     })
 
     try {

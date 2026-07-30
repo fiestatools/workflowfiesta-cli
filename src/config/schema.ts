@@ -51,6 +51,8 @@ export const WorkflowfiestaConfigSchema = z.object({
    */
   useV2Harness: z.boolean().optional().describe('Enable v2 harness endpoint for agent runs (temporary setting, defaults to false)'),
 
+  terminalTitle: z.boolean().optional().describe('Set the terminal title to the conversation title (overrides WORKFLOWFIESTA_DISABLE_TERMINAL_TITLE env var, defaults to true)'),
+
   installScriptUrl: z.string().url().optional().describe('URL of the install script for curl-based upgrades'),
   agents: z.record(AgentConfigSchema).optional().describe('Custom agent configurations'),
   commands: z.record(CommandConfigSchema).optional().describe('Custom command configurations'),
@@ -64,6 +66,7 @@ export const LegacyCliConfigSchema = z.object({
   agentId: z.string().optional(),
   autoupdate: AutoupdateSchema.optional(),
   useV2Harness: z.boolean().optional(),
+  terminalTitle: z.boolean().optional(),
   installScriptUrl: z.string().optional(),
 })
 

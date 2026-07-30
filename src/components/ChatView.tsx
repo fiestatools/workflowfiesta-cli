@@ -42,6 +42,7 @@ export interface ChatViewProps {
   onNewChat?: () => void
   onOpenSettings?: () => void
   onCloseSettings?: () => void
+  onTerminalTitleChanged?: (enabled: boolean) => void
   onClearChat?: () => void
   onRetry?: () => void
   /** Navigate to older input in history (up arrow). */
@@ -84,6 +85,7 @@ export function ChatView({
   onNewChat,
   onOpenSettings,
   onCloseSettings,
+  onTerminalTitleChanged,
   onClearChat,
   onRetry,
   onHistoryUp,
@@ -191,6 +193,7 @@ export function ChatView({
             settingsService={settingsService}
             agents={state.agents}
             onDefaultAgentChanged={() => void chatService.refreshDefaultAgent()}
+            onTerminalTitleChanged={onTerminalTitleChanged}
             onClose={onCloseSettings ?? (() => {})}
           />
         )}

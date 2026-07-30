@@ -4,16 +4,20 @@ import type { OverlayKind } from './ChatView'
 import { useKeyboard, useRenderer, useSelectionHandler } from '@opentui/react'
 import { useEffect, useState } from 'react'
 import { CLI_VERSION } from '../cli'
+import { getConfigManager } from '../config'
 import { useAutoUpgrade } from '../hooks/useAutoUpgrade'
 import { copySelection } from '../utils/selection'
+import { useTerminalTitle } from '../hooks/useTerminalTitle'
+import { isTerminalTitleEnabled } from '../utils/terminalTitle'
 import { ChatView, useChatState, useInput } from './index'
 
 export interface ChatInterfaceProps {
   services: Services
   continueLastSession?: boolean
+  terminalTitle?: string
 }
 
-export function ChatInterface({ services, continueLastSession }: ChatInterfaceProps) {
+export function ChatInterface({ services, continueLastSession, terminalTitle }: ChatInterfaceProps) {
   const state = useChatState(services.chatService)
   const renderer = useRenderer()
   const {
@@ -37,6 +41,15 @@ export function ChatInterface({ services, continueLastSession }: ChatInterfacePr
   // Auto-copy text to clipboard when selection completes (mouse-up after drag)
   useSelectionHandler(() => {
     void copySelection(renderer)
+  const [terminalTitleEnabled, setTerminalTitleEnabled] = useState(true)
+  useEffect(() => {
+    void getConfigManager().getConfigAsync().then(cfg => setTerminalTitleEnabled(isTerminalTitleEnabled(cfg)))
+  }, [])
+    
+  useTerminalTitle({
+    enabled: terminalTitleEnabled,
+    terminalTitle,
+    conversationTitle: state.title,
   })
 
   const toggleSidePanel = () => setSidePanelVisible(prev => !prev)
@@ -147,6 +160,7 @@ export function ChatInterface({ services, continueLastSession }: ChatInterfacePr
       onNewChat={newChat}
       onOpenSettings={openSettings}
       onCloseSettings={closeSettings}
+      onTerminalTitleChanged={setTerminalTitleEnabled}
       onClearChat={clearChat}
       onRetry={retry}
       onHistoryUp={navigateHistoryUp}

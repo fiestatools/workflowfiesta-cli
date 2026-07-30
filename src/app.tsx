@@ -8,9 +8,10 @@ type AppView = 'loading' | 'auth' | 'chat'
 
 export interface StartAppOptions {
   continueLastSession?: boolean
+  terminalTitle?: string
 }
 
-export function App({ services, continueLastSession }: { services: Services | null, continueLastSession?: boolean }) {
+export function App({ services, continueLastSession, terminalTitle }: { services: Services | null, continueLastSession?: boolean, terminalTitle?: string }) {
   const [view, setView] = useState<AppView>('loading')
 
   useEffect(() => {
@@ -42,7 +43,7 @@ export function App({ services, continueLastSession }: { services: Services | nu
     )
   }
 
-  return <ChatInterface services={services} continueLastSession={continueLastSession} />
+  return <ChatInterface services={services} continueLastSession={continueLastSession} terminalTitle={terminalTitle} />
 }
 
 export async function startApp(services: Services, options?: StartAppOptions): Promise<void> {
@@ -50,7 +51,7 @@ export async function startApp(services: Services, options?: StartAppOptions): P
   const root = createRoot(renderer)
   root.render(
     <ErrorBoundary title="Application Error">
-      <App services={services} continueLastSession={options?.continueLastSession} />
+      <App services={services} continueLastSession={options?.continueLastSession} terminalTitle={options?.terminalTitle} />
     </ErrorBoundary>,
   )
 }
