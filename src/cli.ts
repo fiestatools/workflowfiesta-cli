@@ -6,7 +6,7 @@ import pkg from '../package.json'
 export const CLI_VERSION = pkg.version
 
 export type ParsedCommand
-  = | { type: 'chat', continue?: boolean }
+  = | { type: 'chat', continue?: boolean, title?: string }
     | { type: 'run', message: string[], options: RunOptions }
     | { type: 'auth:login', token: string, apiUrl?: string, name?: string, skipValidation?: boolean }
     | { type: 'auth:logout' }
@@ -53,6 +53,7 @@ export function createProgram(): Command {
     .description('WorkflowFiesta CLI - AI Agents for Your Entire Business')
     .version(CLI_VERSION)
     .option('-c, --continue', 'Resume the last conversation')
+    .option('--title <title>', 'Set the terminal title (defaults to the conversation title)')
     .allowExcessArguments(true)
 
   program
@@ -221,8 +222,8 @@ export function parseArgs(): ParsedCommand {
   }
 
   if (result.type === 'chat') {
-    const globalOpts = program.opts<{ continue?: boolean }>()
-    result = { type: 'chat', continue: globalOpts.continue }
+    const globalOpts = program.opts<{ continue?: boolean, title?: string }>()
+    result = { type: 'chat', continue: globalOpts.continue, title: globalOpts.title }
   }
 
   return result

@@ -4,15 +4,19 @@ import type { OverlayKind } from './ChatView'
 import { useKeyboard } from '@opentui/react'
 import { useEffect, useState } from 'react'
 import { CLI_VERSION } from '../cli'
+import { getConfigManager } from '../config'
 import { useAutoUpgrade } from '../hooks/useAutoUpgrade'
+import { useTerminalTitle } from '../hooks/useTerminalTitle'
+import { isTerminalTitleEnabled } from '../utils/terminalTitle'
 import { ChatView, useChatState, useInput } from './index'
 
 export interface ChatInterfaceProps {
   services: Services
   continueLastSession?: boolean
+  terminalTitle?: string
 }
 
-export function ChatInterface({ services, continueLastSession }: ChatInterfaceProps) {
+export function ChatInterface({ services, continueLastSession, terminalTitle }: ChatInterfaceProps) {
   const state = useChatState(services.chatService)
   const {
     input,
@@ -31,6 +35,16 @@ export function ChatInterface({ services, continueLastSession }: ChatInterfacePr
   const [activeAccountName, setActiveAccountName] = useState<string | undefined>()
 
   const { updateInfo, patchInstalled, dismiss: dismissUpdateNotification } = useAutoUpgrade()
+
+  const [terminalTitleEnabled, setTerminalTitleEnabled] = useState(true)
+  useEffect(() => {
+    void getConfigManager().getConfigAsync().then(cfg => setTerminalTitleEnabled(isTerminalTitleEnabled(cfg)))
+  }, [])
+  useTerminalTitle({
+    enabled: terminalTitleEnabled,
+    terminalTitle,
+    conversationTitle: state.title,
+  })
 
   const toggleSidePanel = () => setSidePanelVisible(prev => !prev)
   const openSettings = () => setSettingsVisible(true)
@@ -140,6 +154,7 @@ export function ChatInterface({ services, continueLastSession }: ChatInterfacePr
       onNewChat={newChat}
       onOpenSettings={openSettings}
       onCloseSettings={closeSettings}
+      onTerminalTitleChanged={setTerminalTitleEnabled}
       onClearChat={clearChat}
       onRetry={retry}
       onHistoryUp={navigateHistoryUp}
