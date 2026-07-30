@@ -2,6 +2,8 @@ export interface RunOptions {
   agent?: string
   continue?: boolean
   session?: string
+  /** Copy the final assistant response to the clipboard before exiting. */
+  copy?: boolean
 }
 
 export interface SessionInfo {

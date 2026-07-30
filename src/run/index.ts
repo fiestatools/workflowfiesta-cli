@@ -4,6 +4,7 @@ import type { Services } from '../services'
 import type { RunOptions } from './types'
 import { ConversationStore } from '../config/conversationStore'
 import { logger } from '../logger'
+import { copyToClipboard } from '../utils/clipboard'
 import { readStdin, resolveInput } from './message'
 import {
   isTTY,
@@ -77,7 +78,7 @@ export async function runCommand(
       messageLength: message.length,
     })
 
-    const { promise, handlers } = createRunHandlers(agentId)
+    const { promise, handlers, getLastText } = createRunHandlers(agentId)
 
     const conversationUid = session.uid || undefined
     const run = await services.runService.startRun(
@@ -106,7 +107,24 @@ export async function runCommand(
     // 10. Wait for the run to complete
     await promise
 
-    // 11. Cleanup
+    // 11. Copy to clipboard if requested
+    if (opts.copy) {
+      const textToCopy = getLastText().trim()
+      if (textToCopy) {
+        const ok = await copyToClipboard(textToCopy)
+        // Only show confirmation in TTY (don't pollute piped output)
+        if (process.stderr.isTTY) {
+          if (ok) {
+            process.stderr.write('\x1B[90m(copied to clipboard)\x1B[0m\n')
+          }
+          else {
+            process.stderr.write('\x1B[90m(clipboard copy failed)\x1B[0m\n')
+          }
+        }
+      }
+    }
+
+    // 12. Cleanup
     process.off('SIGINT', cleanup)
     run.dispose()
   }
@@ -119,7 +137,7 @@ export async function runCommand(
 
 function createRunHandlers(
   agentId: string,
-): { promise: Promise<void>, handlers: AgentRunHandlers } {
+): { promise: Promise<void>, handlers: AgentRunHandlers, getLastText: () => string } {
   let headerPrinted = false
   let lastText = ''
   let resolvePromise: () => void
@@ -181,5 +199,5 @@ function createRunHandlers(
     },
   }
 
-  return { promise, handlers }
+  return { promise, handlers, getLastText: () => lastText }
 }

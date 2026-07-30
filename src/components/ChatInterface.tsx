@@ -1,11 +1,12 @@
 import type { StoredAccount } from '../auth'
 import type { Services } from '../services'
 import type { OverlayKind } from './ChatView'
-import { useKeyboard } from '@opentui/react'
+import { useKeyboard, useRenderer, useSelectionHandler } from '@opentui/react'
 import { useEffect, useState } from 'react'
 import { CLI_VERSION } from '../cli'
 import { getConfigManager } from '../config'
 import { useAutoUpgrade } from '../hooks/useAutoUpgrade'
+import { copySelection } from '../utils/selection'
 import { useTerminalTitle } from '../hooks/useTerminalTitle'
 import { isTerminalTitleEnabled } from '../utils/terminalTitle'
 import { ChatView, useChatState, useInput } from './index'
@@ -18,6 +19,7 @@ export interface ChatInterfaceProps {
 
 export function ChatInterface({ services, continueLastSession, terminalTitle }: ChatInterfaceProps) {
   const state = useChatState(services.chatService)
+  const renderer = useRenderer()
   const {
     input,
     setInput,
@@ -36,10 +38,14 @@ export function ChatInterface({ services, continueLastSession, terminalTitle }: 
 
   const { updateInfo, patchInstalled, dismiss: dismissUpdateNotification } = useAutoUpgrade()
 
+  // Auto-copy text to clipboard when selection completes (mouse-up after drag)
+  useSelectionHandler(() => {
+    void copySelection(renderer)
   const [terminalTitleEnabled, setTerminalTitleEnabled] = useState(true)
   useEffect(() => {
     void getConfigManager().getConfigAsync().then(cfg => setTerminalTitleEnabled(isTerminalTitleEnabled(cfg)))
   }, [])
+    
   useTerminalTitle({
     enabled: terminalTitleEnabled,
     terminalTitle,
