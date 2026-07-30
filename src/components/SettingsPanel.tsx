@@ -9,6 +9,7 @@ import { getConfigManager } from '../config'
 import { PROVIDER_TYPE_LABELS } from '../settings'
 import { BRAND_ORANGE, SUBTLE_BG, themeColors } from '../theme'
 import { openUrl } from '../utils/openUrl'
+import { isTerminalTitleEnabled } from '../utils/terminalTitle'
 import { AddProviderForm } from './AddProviderForm'
 import { AgentPicker } from './AgentPicker'
 import { ProviderPicker } from './ProviderPicker'
@@ -28,6 +29,7 @@ export interface SettingsPanelProps {
   agents: AgentSummary[]
   /** Called after the local default-agent pin changes, so the run service can re-resolve it. */
   onDefaultAgentChanged?: () => void
+  onTerminalTitleChanged?: (enabled: boolean) => void
   onClose: () => void
 }
 
@@ -57,7 +59,7 @@ function formatExpiry(iso: string): string {
   return expired ? `${label} (expired)` : label
 }
 
-export function SettingsPanel({ authService, settingsService, agents, onDefaultAgentChanged, onClose }: SettingsPanelProps) {
+export function SettingsPanel({ authService, settingsService, agents, onDefaultAgentChanged, onTerminalTitleChanged, onClose }: SettingsPanelProps) {
   const [config, setConfig] = useState<CliConfig>({})
   const [apiUrlOverride, setApiUrlOverride] = useState<string | undefined>()
   const [editingField, setEditingField] = useState<SettingField | null>(null)
@@ -72,10 +74,11 @@ export function SettingsPanel({ authService, settingsService, agents, onDefaultA
   const [providers, setProviders] = useState<ProviderSummary[]>([])
   const [message, setMessage] = useState<{ type: 'success' | 'error', text: string } | null>(null)
 
-  // Row layout: editable fields, then the v2 harness toggle, the default-agent row, provider row, docs, and (when
-  // signed in) sign out.
+  // Row layout: editable fields, then the v2 harness toggle, the terminal-title toggle, the default-agent row,
+  // provider row, docs, and (when signed in) sign out.
   const v2HarnessRowIndex = SETTING_FIELDS.length
-  const agentRowIndex = v2HarnessRowIndex + 1
+  const terminalTitleRowIndex = v2HarnessRowIndex + 1
+  const agentRowIndex = terminalTitleRowIndex + 1
   const providerRowIndex = agentRowIndex + 1
   const docsIndex = providerRowIndex + 1
   const signOutIndex = docsIndex + 1
@@ -237,6 +240,15 @@ export function SettingsPanel({ authService, settingsService, agents, onDefaultA
     setMessage({ type: 'success', text: `V2 Harness ${newValue ? 'enabled' : 'disabled'}` })
   }, [config.useV2Harness])
 
+  const handleToggleTerminalTitle = useCallback(() => {
+    const configManager = getConfigManager()
+    const newValue = !isTerminalTitleEnabled(config)
+    configManager.setConfig({ terminalTitle: newValue })
+    setConfig(prev => ({ ...prev, terminalTitle: newValue }))
+    onTerminalTitleChanged?.(newValue)
+    setMessage({ type: 'success', text: `Terminal title ${newValue ? 'enabled' : 'disabled'}` })
+  }, [config, onTerminalTitleChanged])
+
   const handleSignOut = useCallback(async () => {
     await authService.signOut()
     setIsAuthenticated(false)
@@ -301,6 +313,9 @@ export function SettingsPanel({ authService, settingsService, agents, onDefaultA
       }
       else if (selectedIndex === v2HarnessRowIndex) {
         handleToggleV2Harness()
+      }
+      else if (selectedIndex === terminalTitleRowIndex) {
+        handleToggleTerminalTitle()
       }
       else if (selectedIndex === agentRowIndex) {
         setAgentPickerOpen(true)
@@ -506,6 +521,23 @@ export function SettingsPanel({ authService, settingsService, agents, onDefaultA
             {config.useV2Harness ? 'Enabled' : 'Disabled'}
           </span>
           <span fg={themeColors.textSubtle}> (temporary)</span>
+        </text>
+      </box>
+
+      {/* Terminal title toggle */}
+      <box flexDirection="row" paddingLeft={1}>
+        <text style={{ width: 2 }}>
+          <span fg={selectedIndex === terminalTitleRowIndex ? themeColors.primary : themeColors.text}>
+            {selectedIndex === terminalTitleRowIndex && !editingField ? '▸' : ' '}
+          </span>
+        </text>
+        <text style={{ width: 18 }}>
+          <span fg={selectedIndex === terminalTitleRowIndex ? themeColors.primary : themeColors.text}>Terminal title:</span>
+        </text>
+        <text>
+          <span fg={isTerminalTitleEnabled(config) ? themeColors.success : themeColors.textMuted}>
+            {isTerminalTitleEnabled(config) ? 'Enabled' : 'Disabled'}
+          </span>
         </text>
       </box>
 

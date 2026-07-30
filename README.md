@@ -66,7 +66,15 @@ Run `/settings` (or `Ctrl+S`) to open the settings panel. It shows:
 
 - **Account** — who you're signed in as, your organization, and the access token in use with its expiry
 - **Configuration** — API base URL and request timeout
+- **Terminal title** — toggle whether the terminal window/tab title follows the conversation title (see below)
 - **Default agent** — the agent new conversations start with. Choose a specific agent to pin it for this CLI, or "Use account default" to follow whatever your account sets in the web app. This is separate from `/agent`, which only switches the current conversation.
+
+### Terminal Title
+
+The CLI sets your terminal window/tab title to the active conversation's title, so multiple `wf` tabs are easy to tell apart. It clears the title again when it exits.
+
+- Pass `--title <title>` to set a fixed title for the session instead of following the conversation.
+- Disable it with the `WORKFLOWFIESTA_DISABLE_TERMINAL_TITLE` env var, or the `terminalTitle` config key (which takes precedence over the env var). The Settings panel toggles the config key.
 
 ### Conversation History
 
