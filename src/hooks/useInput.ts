@@ -1,8 +1,19 @@
 import type { ChatService } from '../chat'
+import type { PasteExpandRange } from '../utils/paste-summary'
 import { useCallback, useRef, useState } from 'react'
+import { expandTrackedPastedText } from '../utils/paste-summary'
 
 /**
- * Hook to manage input state with history navigation.
+ * A tracked pasted text part, storing the original content and its placeholder.
+ */
+export interface TrackedPastePart {
+  extmarkId: number
+  originalText: string
+  placeholderText: string
+}
+
+/**
+ * Hook to manage input state with history navigation and paste tracking.
  */
 export function useInput(chatService: ChatService) {
   const [input, setInput] = useState('')
@@ -17,26 +28,68 @@ export function useInput(chatService: ChatService) {
   // Track if we're currently navigating (to avoid resetting on setInput)
   const isNavigatingRef = useRef(false)
 
-  const handleSubmit = useCallback(async () => {
+  const pastePartsRef = useRef<TrackedPastePart[]>([])
+
+  const addPastePart = useCallback((part: TrackedPastePart) => {
+    pastePartsRef.current.push(part)
+  }, [])
+
+  /**
+   * Clear all tracked paste parts (called after submit or clear).
+   */
+  const clearPasteParts = useCallback(() => {
+    pastePartsRef.current = []
+  }, [])
+
+  /**
+   * Get all tracked paste parts.
+   */
+  const getPasteParts = useCallback(() => {
+    return pastePartsRef.current
+  }, [])
+
+  /**
+   * Remove a paste part by extmark ID (e.g., when user deletes the placeholder).
+   */
+  const removePastePart = useCallback((extmarkId: number) => {
+    pastePartsRef.current = pastePartsRef.current.filter(p => p.extmarkId !== extmarkId)
+  }, [])
+
+  const handleSubmit = useCallback(async (
+    getExtmarkRanges?: () => PasteExpandRange[],
+  ) => {
     if (!input.trim() || isSubmitting)
       return
 
     setIsSubmitting(true)
     try {
-      await chatService.sendMessage(input)
+      // Expand any paste placeholders before sending
+      let finalText = input
+      if (getExtmarkRanges) {
+        const ranges = getExtmarkRanges()
+        if (ranges.length > 0) {
+          finalText = expandTrackedPastedText(input, ranges)
+        }
+      }
+
+      await chatService.sendMessage(finalText)
+
       // Add to history (avoid duplicates of the last entry)
-      if (historyRef.current[historyRef.current.length - 1] !== input.trim()) {
-        historyRef.current.push(input.trim())
+      // Store the expanded text in history for accurate recall
+      if (historyRef.current[historyRef.current.length - 1] !== finalText.trim()) {
+        historyRef.current.push(finalText.trim())
       }
       // Reset history navigation state
       historyIndexRef.current = -1
       draftRef.current = ''
+      // Clear paste parts after successful submit
+      clearPasteParts()
       setInput('')
     }
     finally {
       setIsSubmitting(false)
     }
-  }, [input, isSubmitting, chatService])
+  }, [input, isSubmitting, chatService, clearPasteParts])
 
   /**
    * Navigate to the previous input in history (older).
@@ -119,5 +172,10 @@ export function useInput(chatService: ChatService) {
     navigateHistoryUp,
     navigateHistoryDown,
     resetHistoryNavigation,
+    // Paste tracking
+    addPastePart,
+    clearPasteParts,
+    getPasteParts,
+    removePastePart,
   }
 }

@@ -1,6 +1,114 @@
 import { logger } from '../logger'
 
 /**
+ * Read text from the clipboard.
+ *
+ * Used as a fallback for Ctrl+V when bracketed paste isn't supported by the terminal.
+ * Only uses native tools (not OSC 52, which doesn't support reading).
+ *
+ * Returns null if reading fails or clipboard is empty.
+ */
+export async function readFromClipboard(): Promise<string | null> {
+  try {
+    if (process.platform === 'darwin') {
+      return await tryOsascriptRead()
+    }
+
+    if (process.platform === 'win32') {
+      return await tryPowershellRead()
+    }
+
+    // Linux/BSD: try various clipboard tools
+    for (const command of readCommands()) {
+      const result = await tryReadCommand(command)
+      if (result !== null)
+        return result
+    }
+
+    return null
+  }
+  catch (error) {
+    logger.debug('Clipboard read failed:', error)
+    return null
+  }
+}
+
+/**
+ * Read clipboard via osascript on macOS.
+ */
+async function tryOsascriptRead(): Promise<string | null> {
+  try {
+    const proc = Bun.spawn(
+      ['osascript', '-e', 'the clipboard'],
+      { stdin: 'ignore', stdout: 'pipe', stderr: 'ignore' },
+    )
+    const exitCode = await proc.exited
+    if (exitCode !== 0)
+      return null
+    const text = await new Response(proc.stdout).text()
+    return text || null
+  }
+  catch {
+    return null
+  }
+}
+
+/**
+ * Read clipboard via PowerShell on Windows.
+ */
+async function tryPowershellRead(): Promise<string | null> {
+  try {
+    const proc = Bun.spawn(
+      [
+        'powershell.exe',
+        '-NonInteractive',
+        '-NoProfile',
+        '-Command',
+        'Get-Clipboard',
+      ],
+      { stdin: 'ignore', stdout: 'pipe', stderr: 'ignore' },
+    )
+    const exitCode = await proc.exited
+    if (exitCode !== 0)
+      return null
+    const text = await new Response(proc.stdout).text()
+    return text || null
+  }
+  catch {
+    return null
+  }
+}
+
+/**
+ * Get list of clipboard read commands for Linux/BSD.
+ */
+function readCommands(): string[][] {
+  return [
+    ['wl-paste'],
+    ['xclip', '-selection', 'clipboard', '-o'],
+    ['xsel', '--clipboard', '--output'],
+    ['powershell.exe', '-NonInteractive', '-NoProfile', '-Command', 'Get-Clipboard'], // WSL
+  ]
+}
+
+/**
+ * Try to read clipboard using a specific command.
+ */
+async function tryReadCommand(command: string[]): Promise<string | null> {
+  try {
+    const proc = Bun.spawn(command, { stdin: 'ignore', stdout: 'pipe', stderr: 'ignore' })
+    const exitCode = await proc.exited
+    if (exitCode !== 0)
+      return null
+    const text = await new Response(proc.stdout).text()
+    return text || null
+  }
+  catch {
+    return null
+  }
+}
+
+/**
  * Copy text to the clipboard, robustly, across local and remote sessions.
  *
  * Two mechanisms are layered so copy works "everywhere":

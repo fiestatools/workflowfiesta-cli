@@ -48,6 +48,9 @@ export const themeColors = {
   bg: '#000000',
   bgSubtle: '#1c1c1e',
   border: '#333333',
+
+  pasteBadgeBg: '#FFD700',
+  pasteBadgeFg: '#000000',
 } as const
 
 /** ANSI escape codes for terminal colors (legacy - prefer themeColors). */
