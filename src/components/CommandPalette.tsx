@@ -1,10 +1,12 @@
+import type { ScrollBoxRenderable } from '@opentui/core'
 import type { Command } from '../commands'
 import { TextAttributes } from '@opentui/core'
 import { useKeyboard } from '@opentui/react'
 
-import { useEffect, useMemo, useState } from 'react'
-import { COMMANDS, filterCommands, findCommand, parseCommandInput } from '../commands'
+import { useEffect, useMemo, useRef, useState } from 'react'
+import { filterCommands, findCommand, parseCommandInput } from '../commands'
 import { BRAND_ORANGE, SUBTLE_BG, themeColors } from '../theme'
+import { commandRow, groupCommands, paletteHeight, scrollTopFor, viewportRows } from './commandPaletteLayout'
 
 /** Props for the CommandPalette component. */
 export interface CommandPaletteProps {
@@ -31,23 +33,44 @@ export function CommandPalette({ input, onExecute, onClose, onInputChange }: Com
       const exact = findCommand(query)
       return exact?.requiresArgs ? [exact] : []
     }
-    if (!query)
-      return COMMANDS
     return filterCommands(query)
   }, [query, args])
+
+  const groups = useMemo(() => groupCommands(filteredCommands), [filteredCommands])
+  const commands = useMemo(() => groups.flatMap(group => group.commands), [groups])
+  const groupOffsets = useMemo(() => {
+    let offset = 0
+    return groups.map((group) => {
+      const start = offset
+      offset += group.commands.length
+      return start
+    })
+  }, [groups])
 
   const [selectedIndex, setSelectedIndex] = useState(0)
 
   // Reset selection when filtered commands change
   useEffect(() => {
     setSelectedIndex((prev) => {
-      if (filteredCommands.length === 0)
+      if (commands.length === 0)
         return 0
-      if (prev >= filteredCommands.length)
-        return filteredCommands.length - 1
+      if (prev >= commands.length)
+        return commands.length - 1
       return prev < 0 ? 0 : prev
     })
-  }, [filteredCommands.length])
+  }, [commands.length])
+
+  const scrollRef = useRef<ScrollBoxRenderable>(null)
+  const selectedRow = commandRow(groups, selectedIndex)
+  const rows = viewportRows(groups)
+
+  useEffect(() => {
+    const scrollBox = scrollRef.current
+    if (!scrollBox) {
+      return
+    }
+    scrollBox.scrollTop = scrollTopFor(selectedRow, scrollBox.scrollTop, rows)
+  }, [selectedRow, rows])
 
   // Get display label with alias if it matches
   const getDisplayLabel = (cmd: Command) => {
@@ -59,22 +82,22 @@ export function CommandPalette({ input, onExecute, onClose, onInputChange }: Com
   useKeyboard((key) => {
     switch (key.name) {
       case 'up':
-        setSelectedIndex(prev => (prev > 0 ? prev - 1 : filteredCommands.length - 1))
+        setSelectedIndex(prev => (prev > 0 ? prev - 1 : commands.length - 1))
         break
       case 'down':
-        setSelectedIndex(prev => (prev < filteredCommands.length - 1 ? prev + 1 : 0))
+        setSelectedIndex(prev => (prev < commands.length - 1 ? prev + 1 : 0))
         break
       case 'tab': {
         // Tab completion - fill in the selected command. Argument-taking
         // commands get a trailing space so the user can keep typing.
-        const selectedCommand = filteredCommands[selectedIndex]
+        const selectedCommand = commands[selectedIndex]
         if (selectedCommand) {
           onInputChange(`/${selectedCommand.name}${selectedCommand.requiresArgs ? ' ' : ''}`)
         }
         break
       }
       case 'return': {
-        const selectedCommand = filteredCommands[selectedIndex]
+        const selectedCommand = commands[selectedIndex]
         if (!selectedCommand) {
           break
         }
@@ -95,32 +118,7 @@ export function CommandPalette({ input, onExecute, onClose, onInputChange }: Com
     }
   })
 
-  // Group commands by category for display
-  const groupedCommands = useMemo(() => {
-    const groups: Record<string, Command[]> = {}
-    for (const cmd of filteredCommands) {
-      const category = cmd.category
-      if (!groups[category]) {
-        groups[category] = []
-      }
-      groups[category]!.push(cmd)
-    }
-    return groups
-  }, [filteredCommands])
-
-  // Calculate global index for selection highlighting
-  const getGlobalIndex = (category: string, localIndex: number): number => {
-    let idx = 0
-    for (const [cat, cmds] of Object.entries(groupedCommands)) {
-      if (cat === category) {
-        return idx + localIndex
-      }
-      idx += cmds.length
-    }
-    return -1
-  }
-
-  if (filteredCommands.length === 0) {
+  if (commands.length === 0) {
     return (
       <box
         style={{
@@ -140,11 +138,6 @@ export function CommandPalette({ input, onExecute, onClose, onInputChange }: Com
     )
   }
 
-  // Calculate height: header + categories + commands + spacing
-  const categoryCount = Object.keys(groupedCommands).length
-  const commandCount = filteredCommands.length
-  const maxHeight = Math.min(commandCount + categoryCount + 2, 15)
-
   return (
     <box
       style={{
@@ -152,7 +145,7 @@ export function CommandPalette({ input, onExecute, onClose, onInputChange }: Com
         bottom: 4,
         left: 0,
         width: '100%',
-        height: maxHeight,
+        height: paletteHeight(groups),
         zIndex: 100,
         backgroundColor: SUBTLE_BG,
         border: true,
@@ -169,21 +162,21 @@ export function CommandPalette({ input, onExecute, onClose, onInputChange }: Com
 
       {/* Scrollable command list */}
       <scrollbox
+        ref={scrollRef}
         flexGrow={1}
         contentOptions={{ flexDirection: 'column' }}
         stickyScroll={false}
       >
-        {Object.entries(groupedCommands).map(([category, cmds]) => (
-          <box key={category} flexDirection="column">
+        {groups.map((group, groupIdx) => (
+          <box key={group.category} flexDirection="column">
             {/* Category header */}
             <text fg={themeColors.textSubtle} attributes={TextAttributes.DIM}>
-              {category.charAt(0).toUpperCase() + category.slice(1)}
+              {group.category.charAt(0).toUpperCase() + group.category.slice(1)}
             </text>
 
             {/* Commands in this category */}
-            {cmds.map((cmd, localIdx) => {
-              const globalIdx = getGlobalIndex(category, localIdx)
-              const isSelected = globalIdx === selectedIndex
+            {group.commands.map((cmd, localIdx) => {
+              const isSelected = groupOffsets[groupIdx]! + localIdx === selectedIndex
 
               return (
                 <box key={cmd.name} flexDirection="row">
