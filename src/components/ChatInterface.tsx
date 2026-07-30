@@ -1,10 +1,11 @@
 import type { StoredAccount } from '../auth'
 import type { Services } from '../services'
 import type { OverlayKind } from './ChatView'
-import { useKeyboard } from '@opentui/react'
+import { useKeyboard, useRenderer, useSelectionHandler } from '@opentui/react'
 import { useEffect, useState } from 'react'
 import { CLI_VERSION } from '../cli'
 import { useAutoUpgrade } from '../hooks/useAutoUpgrade'
+import { copySelection } from '../utils/selection'
 import { ChatView, useChatState, useInput } from './index'
 
 export interface ChatInterfaceProps {
@@ -14,6 +15,7 @@ export interface ChatInterfaceProps {
 
 export function ChatInterface({ services, continueLastSession }: ChatInterfaceProps) {
   const state = useChatState(services.chatService)
+  const renderer = useRenderer()
   const {
     input,
     setInput,
@@ -31,6 +33,11 @@ export function ChatInterface({ services, continueLastSession }: ChatInterfacePr
   const [activeAccountName, setActiveAccountName] = useState<string | undefined>()
 
   const { updateInfo, patchInstalled, dismiss: dismissUpdateNotification } = useAutoUpgrade()
+
+  // Auto-copy text to clipboard when selection completes (mouse-up after drag)
+  useSelectionHandler(() => {
+    void copySelection(renderer)
+  })
 
   const toggleSidePanel = () => setSidePanelVisible(prev => !prev)
   const openSettings = () => setSettingsVisible(true)

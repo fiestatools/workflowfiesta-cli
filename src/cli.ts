@@ -62,6 +62,7 @@ export function createProgram(): Command {
     .option('-a, --agent <name>', 'Agent to use')
     .option('-c, --continue', 'Continue the last conversation')
     .option('-s, --session <id>', 'Conversation ID to continue')
+    .option('--copy', 'Copy the final response to clipboard')
 
   const auth = program
     .command('auth')
@@ -149,6 +150,7 @@ export function parseArgs(): ParsedCommand {
         agent: opts.agent,
         continue: opts.continue,
         session: opts.session,
+        copy: opts.copy,
       },
     }
   })

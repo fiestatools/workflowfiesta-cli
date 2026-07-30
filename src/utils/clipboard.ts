@@ -5,8 +5,9 @@ import { logger } from '../logger'
  *
  * Two mechanisms are layered so copy works "everywhere":
  *
- * 1. **Native tools** — `pbcopy` (macOS), `clip` (Windows), `wl-copy` / `xclip` /
- *    `xsel` (Linux), `clip.exe` (WSL). Rock-solid locally, with no size limit.
+ * 1. **Native tools** — `osascript` (macOS, via NSPasteboard API),
+ *    `powershell.exe Set-Clipboard` (Windows), `wl-copy` / `xclip` / `xsel`
+ *    (Linux), `clip.exe` (WSL). Rock-solid locally, with no size limit.
  * 2. **OSC 52** — a terminal escape sequence that asks the *terminal emulator*
  *    to set the clipboard. This is the only thing that works over **SSH / tmux**,
  *    where native tools would copy to the remote host's clipboard instead of the
@@ -15,6 +16,13 @@ import { logger } from '../logger'
  * Order depends on context: locally we prefer native (reliable, unbounded size,
  * no writes to the TUI's stdout); over SSH we prefer OSC 52 (native would target
  * the wrong machine). Best-effort and never throws.
+ *
+ * Note: On macOS we use `osascript` instead of `pbcopy` because pbcopy silently
+ * truncates text containing null bytes and has Unicode edge cases. osascript
+ * writes via the native NSPasteboard API and is fully reliable.
+ *
+ * Note: On Windows we use PowerShell's `Set-Clipboard` instead of `clip` because
+ * clip has encoding issues with Unicode text. PowerShell handles UTF-8 properly.
  *
  * Note: OSC 52 delivery cannot be confirmed — the terminal never acknowledges
  * it — so a `true` result there means "emitted", not "guaranteed pasted". Most
@@ -42,8 +50,15 @@ function isRemoteSession(): boolean {
   return Boolean(process.env.SSH_TTY || process.env.SSH_CONNECTION || process.env.SSH_CLIENT)
 }
 
-/** Try each platform clipboard binary in turn, writing the text to its stdin. */
 async function tryNativeCopy(text: string): Promise<boolean> {
+  if (process.platform === 'darwin') {
+    return tryOsascriptCopy(text)
+  }
+
+  if (process.platform === 'win32') {
+    return tryPowershellCopy(text)
+  }
+
   for (const command of nativeCommands()) {
     try {
       const proc = Bun.spawn(command, { stdin: 'pipe', stdout: 'ignore', stderr: 'ignore' })
@@ -60,7 +75,45 @@ async function tryNativeCopy(text: string): Promise<boolean> {
   return false
 }
 
-/** Candidate clipboard commands for the current platform, in preference order. */
+/**
+ * Copy text via osascript on macOS. The string must be escaped (backslashes
+ * and double-quotes) before being embedded in the AppleScript literal.
+ */
+async function tryOsascriptCopy(text: string): Promise<boolean> {
+  try {
+    const escaped = text.replace(/\\/g, '\\\\').replace(/"/g, '\\"')
+    const proc = Bun.spawn(
+      ['osascript', '-e', `set the clipboard to "${escaped}"`],
+      { stdin: 'ignore', stdout: 'ignore', stderr: 'ignore' },
+    )
+    return (await proc.exited) === 0
+  }
+  catch {
+    return false
+  }
+}
+
+async function tryPowershellCopy(text: string): Promise<boolean> {
+  try {
+    const proc = Bun.spawn(
+      [
+        'powershell.exe',
+        '-NonInteractive',
+        '-NoProfile',
+        '-Command',
+        '[Console]::InputEncoding = [System.Text.Encoding]::UTF8; Set-Clipboard -Value ([Console]::In.ReadToEnd())',
+      ],
+      { stdin: 'pipe', stdout: 'ignore', stderr: 'ignore' },
+    )
+    proc.stdin.write(text)
+    await proc.stdin.end()
+    return (await proc.exited) === 0
+  }
+  catch {
+    return false
+  }
+}
+
 function nativeCommands(): string[][] {
   switch (process.platform) {
     case 'darwin':
@@ -89,7 +142,6 @@ function writeOsc52(text: string): boolean {
     return false
   }
   try {
-    // Written in a single call so the escape sequence can't be torn across frames.
     process.stdout.write(buildOsc52(text, { tmux: Boolean(process.env.TMUX) }))
     return true
   }
