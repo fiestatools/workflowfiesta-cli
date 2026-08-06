@@ -3,15 +3,24 @@ import { createCliRenderer } from '@opentui/core'
 import { createRoot } from '@opentui/react'
 import { useEffect, useState } from 'react'
 import { AuthGate, ChatInterface, ErrorBoundary, LoadingScreen } from './components'
+import { printExitSummary } from './utils/exitSummary'
 
 type AppView = 'loading' | 'auth' | 'chat'
 
 export interface StartAppOptions {
   continueLastSession?: boolean
+  resumeConversationUid?: string
   terminalTitle?: string
 }
 
-export function App({ services, continueLastSession, terminalTitle }: { services: Services | null, continueLastSession?: boolean, terminalTitle?: string }) {
+export interface AppProps {
+  services: Services | null
+  continueLastSession?: boolean
+  resumeConversationUid?: string
+  terminalTitle?: string
+}
+
+export function App({ services, continueLastSession, resumeConversationUid, terminalTitle }: AppProps) {
   const [view, setView] = useState<AppView>('loading')
 
   useEffect(() => {
@@ -43,15 +52,33 @@ export function App({ services, continueLastSession, terminalTitle }: { services
     )
   }
 
-  return <ChatInterface services={services} continueLastSession={continueLastSession} terminalTitle={terminalTitle} />
+  return (
+    <ChatInterface
+      services={services}
+      continueLastSession={continueLastSession}
+      resumeConversationUid={resumeConversationUid}
+      terminalTitle={terminalTitle}
+    />
+  )
 }
 
 export async function startApp(services: Services, options?: StartAppOptions): Promise<void> {
-  const renderer = await createCliRenderer()
+  if (process.stdout.isTTY) {
+    process.stdout.write('\x1B[s')
+  }
+
+  const renderer = await createCliRenderer({
+    onDestroy: () => printExitSummary(services.chatService.getState()),
+  })
   const root = createRoot(renderer)
   root.render(
     <ErrorBoundary title="Application Error">
-      <App services={services} continueLastSession={options?.continueLastSession} terminalTitle={options?.terminalTitle} />
+      <App
+        services={services}
+        continueLastSession={options?.continueLastSession}
+        resumeConversationUid={options?.resumeConversationUid}
+        terminalTitle={options?.terminalTitle}
+      />
     </ErrorBoundary>,
   )
 }
