@@ -36,6 +36,12 @@ wf
 
 # Or use the full name
 workflowfiesta
+
+# Pick up where you left off
+wf --continue
+
+# Reopen a specific conversation
+wf -s <conversation-id>
 ```
 
 On first run, you'll be prompted to authenticate with your API token.
@@ -76,6 +82,24 @@ The CLI sets your terminal window/tab title to `WF - <conversation title>`, so m
 - Pass `--title <title>` to set a fixed title for the session instead of following the conversation. The `WF - ` prefix still applies.
 - Disable it with the `WORKFLOWFIESTA_DISABLE_TERMINAL_TITLE` env var, or the `terminalTitle` config key (which takes precedence over the env var). The Settings panel toggles the config key.
 
+### Resuming Conversations
+
+On exit (`Ctrl+C`), the CLI prints the conversation you were on and the command that reopens it:
+
+```
+  WorkflowFiesta
+
+  Session   Docker Compose can't resolve 'db' address
+  Continue  wf -s 018f3c2a-7b19-4d6e-9c11-2a5f8e0b4d33
+```
+
+| Command | Description |
+|---------|-------------|
+| `wf -s <id>` | Reopen that conversation |
+| `wf -c` | Reopen the most recent conversation |
+
+The two flags are mutually exclusive. `wf run` takes the same flags for non-interactive use. Nothing is printed on exit if the session never started a conversation, or if it was reset with `/new`.
+
 ### Conversation History
 
 Run `/history` to browse and manage previous conversations. Conversations are stored locally and synced with the backend.
@@ -111,7 +135,7 @@ Verdicts from the platform's guard agents render as distinct bubbles, matching t
 | `Ctrl+N` | New conversation |
 | `Shift+Enter` | Newline in input |
 | `Enter` | Send message |
-| `Ctrl+C` | Quit |
+| `Ctrl+C` | Quit (prints how to resume the conversation) |
 
 ## Configuration
 

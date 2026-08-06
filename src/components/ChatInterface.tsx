@@ -14,10 +14,11 @@ import { ChatView, useChatState, useInput } from './index'
 export interface ChatInterfaceProps {
   services: Services
   continueLastSession?: boolean
+  resumeConversationUid?: string
   terminalTitle?: string
 }
 
-export function ChatInterface({ services, continueLastSession, terminalTitle }: ChatInterfaceProps) {
+export function ChatInterface({ services, continueLastSession, resumeConversationUid, terminalTitle }: ChatInterfaceProps) {
   const state = useChatState(services.chatService)
   const renderer = useRenderer()
   const {
@@ -135,12 +136,15 @@ export function ChatInterface({ services, continueLastSession, terminalTitle }: 
     const init = async () => {
       await services.chatService.initialize()
       await loadAccounts()
-      if (continueLastSession) {
+      if (resumeConversationUid) {
+        await services.chatService.switchConversation(resumeConversationUid)
+      }
+      else if (continueLastSession) {
         await services.chatService.continueLastConversation()
       }
     }
     void init()
-  }, [services.chatService, continueLastSession])
+  }, [services.chatService, continueLastSession, resumeConversationUid])
 
   return (
     <ChatView
