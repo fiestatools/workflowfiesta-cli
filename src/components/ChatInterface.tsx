@@ -162,6 +162,7 @@ export function ChatInterface({ services, continueLastSession, resumeConversatio
       settingsVisible={settingsVisible}
       authService={services.auth}
       settingsService={services.settingsService}
+      commandService={services.commandService}
       onToggleSidePanel={toggleSidePanel}
       onNewChat={newChat}
       onOpenSettings={openSettings}

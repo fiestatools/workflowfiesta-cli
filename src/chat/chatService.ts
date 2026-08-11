@@ -1,3 +1,4 @@
+import type { Command } from '../commands'
 import type { StoredConversation } from '../config'
 import type { ActiveRun, AgentRunService, AgentSummary, RunEvent } from '../runs'
 import type {
@@ -12,6 +13,7 @@ import type {
   SpecialMessageType,
 } from '../runs/runEvents'
 import type { PollHandle } from '../utils/poller'
+import { renderPromptTemplate } from '../commands'
 import { ConversationStore } from '../config'
 import {
   CONVERSATION_TITLE_MAX_LENGTH,
@@ -66,6 +68,23 @@ export interface McpSetupResult {
 /** Chat state change listener. */
 export type ChatStateListener = (state: ChatState) => void
 
+/** A custom command the thread is running under, until the session ends. */
+export interface CommandSession {
+  commandUid?: string
+  /** Slash name, without the leading `/`. */
+  slug: string
+  displayName: string
+  icon?: string
+  /** Agent to restore when the session ends. */
+  previousAgentId?: string
+}
+
+export interface CommandSessionResult {
+  ok: boolean
+  /** Text to seed into the input, from the command's prompt template. */
+  prompt?: string
+}
+
 /** Current chat state. */
 export interface ChatState {
   messages: ChatMessage[]
@@ -82,6 +101,8 @@ export interface ChatState {
   /** Backend UID of the active conversation thread, once one exists. */
   conversationUid?: string
   title?: string
+  /** The custom command the thread is running under, if any. */
+  commandSession?: CommandSession
 }
 
 /**
@@ -315,6 +336,54 @@ export class ChatService {
     this.updateState({ currentAgent })
   }
 
+  /**
+   * Switch to the command's agent for the rest of the thread and announce it.
+   * Returns the prompt to seed the input with, when the command defines one.
+   */
+  startCommandSession(command: Command, args = ''): CommandSessionResult {
+    if (!command.agentId) {
+      const hint = command.source === 'config'
+        ? 'add an "agentId" to its config file.'
+        : 'assign one in Settings → Commands.'
+      this.addSystemMessage(`/${command.name} has no agent assigned — ${hint}`)
+      return { ok: false }
+    }
+
+    const displayName = command.displayName ?? command.name
+    const previousAgentId = this.selectedAgentId
+
+    this.selectedAgentId = command.agentId
+    const currentAgent = this.state.agents.find(a => a.uid === command.agentId)
+
+    this.updateState({
+      currentAgent,
+      commandSession: {
+        commandUid: command.uid,
+        slug: command.name,
+        displayName,
+        icon: command.icon,
+        previousAgentId,
+      },
+    })
+    this.addSystemMessage(`${command.icon ? `${command.icon} ` : ''}Started ${displayName} session`)
+
+    return { ok: true, prompt: renderPromptTemplate(command.promptTemplate, args) }
+  }
+
+  /** Leave the active command session and restore the previous agent. */
+  endCommandSession(): void {
+    const session = this.state.commandSession
+    if (!session) {
+      this.addSystemMessage('No command session is active.')
+      return
+    }
+
+    this.selectedAgentId = session.previousAgentId ?? this.defaultAgentId
+    const currentAgent = this.state.agents.find(a => a.uid === this.selectedAgentId)
+    this.updateState({ currentAgent, commandSession: undefined })
+    this.addSystemMessage(`Ended ${session.displayName} session`)
+  }
+
   /** Start a new chat. */
   newChat(): void {
     logger.debug('newChat')
@@ -338,6 +407,7 @@ export class ChatService {
       pendingReveal: undefined,
       conversationUid: undefined,
       title: undefined,
+      commandSession: undefined,
     })
   }
 
@@ -412,6 +482,7 @@ export class ChatService {
       pendingRequests: [],
       conversationUid: uid,
       title: this.currentTitle,
+      commandSession: undefined,
     })
 
     try {
@@ -748,7 +819,8 @@ export class ChatService {
     })
   }
 
-  private addSystemMessage(content: string): void {
+  /** Append a system line to the transcript. */
+  addSystemMessage(content: string): void {
     const message: ChatMessage = {
       id: crypto.randomUUID(),
       role: 'system',

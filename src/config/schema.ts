@@ -1,6 +1,6 @@
 import { z } from 'zod'
 
-export const CommandCategorySchema = z.enum(['chat', 'settings', 'navigation', 'help'])
+export const CommandCategorySchema = z.enum(['chat', 'settings', 'navigation', 'help', 'custom'])
 export type CommandCategory = z.infer<typeof CommandCategorySchema>
 export interface ValidationResult<T> {
   success: boolean
@@ -15,6 +15,10 @@ export const CommandConfigSchema = z.object({
   category: CommandCategorySchema.default('chat').describe('Category for grouping'),
   requiresArgs: z.boolean().optional().describe('Whether the command requires arguments'),
   argsPlaceholder: z.string().optional().describe('Placeholder text for arguments'),
+  displayName: z.string().optional().describe('Label shown when the command session starts'),
+  icon: z.string().optional().describe('Emoji shown alongside the command session banner'),
+  agentId: z.string().optional().describe('UID of the agent this command switches to'),
+  promptTemplate: z.string().optional().describe('Prompt seeded into the input, may reference {{args}}'),
 })
 export type CommandConfig = z.infer<typeof CommandConfigSchema>
 

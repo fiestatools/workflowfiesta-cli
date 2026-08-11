@@ -5,6 +5,7 @@ import { useKeyboard } from '@opentui/react'
 
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { filterCommands, findCommand, parseCommandInput } from '../commands'
+import { useCommands } from '../hooks'
 import { BRAND_ORANGE, SUBTLE_BG, themeColors } from '../theme'
 import { commandRow, groupCommands, paletteHeight, scrollTopFor, viewportRows } from './commandPaletteLayout'
 
@@ -18,23 +19,29 @@ export interface CommandPaletteProps {
   onClose: () => void
   /** Called when input should be updated (tab completion). */
   onInputChange: (value: string) => void
+  /**
+   * Called once when the palette opens, so stale custom commands can be
+   * refreshed in the background while the cached list is already on screen.
+   */
+  onOpen?: () => void
 }
 
 /** Command palette overlay for / commands. */
-export function CommandPalette({ input, onExecute, onClose, onInputChange }: CommandPaletteProps) {
+export function CommandPalette({ input, onExecute, onClose, onInputChange, onOpen }: CommandPaletteProps) {
   // Split input (minus the leading /) into the command word and its arguments.
   const { word, args } = parseCommandInput(input.startsWith('/') ? input.slice(1) : '')
   const query = word.toLowerCase()
+  const allCommands = useCommands()
 
   const filteredCommands = useMemo(() => {
     // Once arguments are being typed, only an exact argument-taking command
     // still matches (e.g. "/rename My title" pins the palette to /rename).
     if (args) {
-      const exact = findCommand(query)
+      const exact = findCommand(query, allCommands)
       return exact?.requiresArgs ? [exact] : []
     }
-    return filterCommands(query)
-  }, [query, args])
+    return filterCommands(query, allCommands)
+  }, [query, args, allCommands])
 
   const groups = useMemo(() => groupCommands(filteredCommands), [filteredCommands])
   const commands = useMemo(() => groups.flatMap(group => group.commands), [groups])
@@ -46,6 +53,10 @@ export function CommandPalette({ input, onExecute, onClose, onInputChange }: Com
       return start
     })
   }, [groups])
+
+  useEffect(() => {
+    onOpen?.()
+  }, [onOpen])
 
   const [selectedIndex, setSelectedIndex] = useState(0)
 
