@@ -4,10 +4,16 @@ import { homedir } from 'node:os'
 import { join } from 'node:path'
 import { logger } from '../logger'
 
+interface CacheOrgEntry {
+  fetchedAt: string
+  commands: RemoteCustomCommand[]
+  pushedSlugs?: string[]
+}
+
 interface CacheFile {
   version: 1
   lastOrgId?: string
-  orgs: Record<string, { fetchedAt: string, commands: RemoteCustomCommand[] }>
+  orgs: Record<string, CacheOrgEntry>
 }
 
 const EMPTY_CACHE: CacheFile = { version: 1, orgs: {} }
@@ -43,10 +49,28 @@ export class RemoteCommandCache {
     return { orgId, commands: cache.orgs[orgId]?.commands ?? [] }
   }
 
-  /** Replace the cached commands for an org. */
+  /** Slugs already published to an org from local config files. */
+  readPushedSlugs(orgId: string): Set<string> {
+    return new Set(this.load().orgs[orgId]?.pushedSlugs ?? [])
+  }
+
+  /** Record slugs as published so they are never pushed to this org again. */
+  markPushed(orgId: string, slugs: readonly string[]): void {
+    if (slugs.length === 0) {
+      return
+    }
+    const cache = this.load()
+    const entry = cache.orgs[orgId] ?? { fetchedAt: new Date().toISOString(), commands: [] }
+    entry.pushedSlugs = [...new Set([...(entry.pushedSlugs ?? []), ...slugs])]
+    cache.orgs[orgId] = entry
+    this.persist(cache)
+  }
+
+  /** Replace the cached commands for an org, preserving its pushed slugs. */
   write(orgId: string, commands: RemoteCustomCommand[]): void {
     const cache = this.load()
-    cache.orgs[orgId] = { fetchedAt: new Date().toISOString(), commands }
+    const pushedSlugs = cache.orgs[orgId]?.pushedSlugs
+    cache.orgs[orgId] = { fetchedAt: new Date().toISOString(), commands, pushedSlugs }
     cache.lastOrgId = orgId
     this.persist(cache)
   }
