@@ -1,8 +1,7 @@
 import type { ApiClient } from '../api'
 import type { CommandConfig } from '../config'
 import type { CommandRegistry } from './registry'
-import type { RemoteCustomCommand } from './types'
-import { ApiError } from '../api'
+import type { BulkCreateCommand, BulkCreateResult, RemoteCustomCommand } from './types'
 import { getConfigManager } from '../config'
 import { CUSTOM_COMMAND_SYNC_TTL_MS } from '../constants'
 import { logger } from '../logger'
@@ -129,8 +128,8 @@ export class CustomCommandService {
 
     const alreadyPublished = this.cache.readPushedSlugs(orgId)
     const remoteSlugs = new Set(remote.map(cmd => cmd.command.toLowerCase()))
-    const created: RemoteCustomCommand[] = []
     const publishedSlugs: string[] = []
+    const toPublish: BulkCreateCommand[] = []
 
     for (const local of this.localCommands) {
       const slug = local.name.toLowerCase()
@@ -141,27 +140,44 @@ export class CustomCommandService {
         publishedSlugs.push(slug)
         continue
       }
+      toPublish.push({
+        command: slug,
+        displayName: local.displayName ?? local.name,
+        description: local.description,
+        icon: local.icon,
+        agentUid: local.agentId,
+        promptTemplate: local.promptTemplate,
+      })
+    }
 
-      try {
-        const command = await this.api.post<RemoteCustomCommand>('/external/custom-commands', {
-          command: slug,
-          displayName: local.displayName ?? local.name,
-          description: local.description,
-          icon: local.icon,
-          agentUid: local.agentId,
-          promptTemplate: local.promptTemplate,
-        })
-        created.push(command)
-        publishedSlugs.push(slug)
-        logger.info(`Published local command /${slug} to the org`)
-      }
-      catch (err) {
-        if (err instanceof ApiError && err.status === 409) {
-          publishedSlugs.push(slug)
-          continue
+    if (toPublish.length === 0) {
+      this.cache.markPushed(orgId, publishedSlugs)
+      return []
+    }
+
+    let created: RemoteCustomCommand[] = []
+    try {
+      const result = await this.api.post<BulkCreateResult>('/external/custom-commands', {
+        commands: toPublish,
+      })
+      created = result.created
+      publishedSlugs.push(...created.map(cmd => cmd.command))
+
+      for (const skip of result.skipped) {
+        // A taken name is settled; a bad agent is retried once the file is fixed.
+        if (skip.reason === 'exists') {
+          publishedSlugs.push(skip.command)
         }
-        logger.warn(`Failed to publish local command /${slug}: ${err instanceof Error ? err.message : String(err)}`)
+        else {
+          logger.warn(`Skipped local command /${skip.command}: ${skip.message}`)
+        }
       }
+      if (created.length > 0) {
+        logger.info(`Published ${created.length} local command(s) to the org`)
+      }
+    }
+    catch (err) {
+      logger.warn(`Failed to publish local commands: ${err instanceof Error ? err.message : String(err)}`)
     }
 
     this.cache.markPushed(orgId, publishedSlugs)

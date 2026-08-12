@@ -29,6 +29,22 @@ export interface Command {
   promptTemplate?: string
 }
 
+/** One entry of a `POST /external/custom-commands` payload. */
+export interface BulkCreateCommand {
+  command: string
+  displayName: string
+  description?: string
+  icon?: string
+  agentUid?: string
+  promptTemplate?: string
+}
+
+/** The result of a bulk create; skipped entries were left untouched. */
+export interface BulkCreateResult {
+  created: RemoteCustomCommand[]
+  skipped: Array<{ command: string, reason: 'exists' | 'agentNotFound', message: string }>
+}
+
 /** A remote command as returned by `GET /external/custom-commands`. */
 export interface RemoteCustomCommand {
   uid: string

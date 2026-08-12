@@ -9,7 +9,7 @@ export { renderPromptTemplate } from './promptTemplate'
 export { CommandRegistry, getCommandRegistry, resetCommandRegistry } from './registry'
 export type { CommandsListener } from './registry'
 export { RemoteCommandCache } from './remoteCommandCache'
-export type { Command, CommandSource, RemoteCustomCommand } from './types'
+export type { BulkCreateCommand, BulkCreateResult, Command, CommandSource, RemoteCustomCommand } from './types'
 
 /** The merged list of built-in, config-file, and remote commands. */
 export function getCommands(): Command[] {
