@@ -1,6 +1,7 @@
 import type { RunOptions } from './run'
 import type { Services } from './services'
 import { Command } from 'commander'
+import prompts from 'prompts'
 import pkg from '../package.json'
 
 export const CLI_VERSION = pkg.version
@@ -8,7 +9,7 @@ export const CLI_VERSION = pkg.version
 export type ParsedCommand
   = | { type: 'chat', continue?: boolean, session?: string, title?: string }
     | { type: 'run', message: string[], options: RunOptions }
-    | { type: 'auth:login', token: string, apiUrl?: string, name?: string, skipValidation?: boolean }
+    | { type: 'auth:login', token?: string, apiUrl?: string, name?: string, skipValidation?: boolean, browser?: boolean }
     | { type: 'auth:logout' }
     | { type: 'auth:status' }
     | { type: 'auth:list' }
@@ -21,7 +22,7 @@ export type ParsedCommand
     | { type: 'uninstall', keepData: boolean, dryRun: boolean, force: boolean }
 
 const COMMAND_SUGGESTIONS: Record<string, string> = {
-  'login': 'wf auth login --token <your-token>',
+  'login': 'wf auth login',
   'logout': 'wf auth logout',
   'status': 'wf auth status',
   'signin': 'wf auth login --token <your-token>',
@@ -73,8 +74,9 @@ export function createProgram(): Command {
 
   auth
     .command('login')
-    .description('Sign in with your access token')
-    .requiredOption('-t, --token <token>', 'Access token from WorkflowFiesta web app')
+    .description('Sign in through your browser or with an access token')
+    .option('-t, --token <token>', 'Access token from WorkflowFiesta web app')
+    .option('-b, --browser', 'Sign in through your browser without prompting')
     .option('-u, --api-url <url>', 'API URL for self-hosted instances')
     .option('-n, --name <name>', 'Account name (e.g., "prod", "staging", "local")')
     .option('--skip-validation', 'Skip token validation (for testing only)')
@@ -160,7 +162,14 @@ export function parseArgs(): ParsedCommand {
 
   const authCmd = program.commands.find(c => c.name() === 'auth')
   authCmd?.commands.find(c => c.name() === 'login')?.action((opts) => {
-    result = { type: 'auth:login', token: opts.token, apiUrl: opts.apiUrl, name: opts.name, skipValidation: opts.skipValidation }
+    result = {
+      type: 'auth:login',
+      token: opts.token,
+      apiUrl: opts.apiUrl,
+      name: opts.name,
+      skipValidation: opts.skipValidation,
+      browser: opts.browser,
+    }
   })
   authCmd?.commands.find(c => c.name() === 'logout')?.action(() => {
     result = { type: 'auth:logout' }
@@ -248,13 +257,51 @@ export function parseArgs(): ParsedCommand {
 export async function executeCommand(command: ParsedCommand, services: Services): Promise<boolean> {
   switch (command.type) {
     case 'auth:login': {
-      if (!command.token) {
-        console.error('Error: --token is required')
-        console.error('Usage: wf auth login --token <your-token>')
-        process.exit(1)
-      }
       try {
-        await services.auth.signIn(command.token, command.apiUrl, command.name, command.skipValidation)
+        let token = command.token
+        let browser = command.browser === true
+
+        if (!token && !browser) {
+          const response = await prompts({
+            type: 'select',
+            name: 'method',
+            message: 'How would you like to sign in?',
+            choices: [
+              { title: 'Browser-based login', value: 'browser', description: 'Recommended' },
+              { title: 'Access token', value: 'token', description: 'Paste a token from the web app' },
+            ],
+            initial: 0,
+          })
+
+          if (!response.method) {
+            console.error('Sign in cancelled.')
+            process.exit(1)
+          }
+
+          browser = response.method === 'browser'
+
+          if (!browser) {
+            const tokenResponse = await prompts({
+              type: 'password',
+              name: 'token',
+              message: 'Access token',
+            })
+
+            token = tokenResponse.token
+            if (!token) {
+              console.error('Sign in cancelled.')
+              process.exit(1)
+            }
+          }
+        }
+
+        if (token) {
+          await services.auth.signIn(token, command.apiUrl, command.name, command.skipValidation)
+        }
+        else {
+          console.log('Opening browser to sign in to WorkflowFiesta...')
+          await services.auth.signInWithBrowser(command.apiUrl, command.name)
+        }
         if (command.name) {
           console.log(`✓ Successfully signed in as "${command.name}"!`)
         }

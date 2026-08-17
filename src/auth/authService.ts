@@ -1,9 +1,11 @@
 import type { ApiClient } from '../api/apiClient'
 import type { TokenProvider } from '../api/types'
 import type { CredentialStore, StoredAccount } from './credentialStore'
-import { createHash } from 'node:crypto'
+import { createHash, randomBytes } from 'node:crypto'
 import { UnauthorizedError } from '../api/errors'
+import { getApiBaseUrl } from '../config/settings'
 import { logger } from '../logger'
+import { openUrl } from '../utils/openUrl'
 
 export type AuthStatus = 'signedIn' | 'signedOut'
 
@@ -19,6 +21,8 @@ export interface AuthStateChange {
  * valid token and 401 for an invalid one, with no domain-data serialization.
  */
 const VALIDATION_ENDPOINT = '/external/me'
+const CLI_AUTH_POLL_INTERVAL_MS = 2_000
+const CLI_AUTH_MAX_ATTEMPTS = 150
 
 /**
  * Shape of an assembled access token: `<prefix>_<32-hex uid>.<hex secret>`
@@ -26,6 +30,25 @@ const VALIDATION_ENDPOINT = '/external/me'
  * is rejected before it reaches the backend.
  */
 const ACCESS_TOKEN_PATTERN = /^[a-z0-9]+_[0-9a-f]{32}\.[0-9a-f]{16,}$/i
+
+interface CliAuthStartResponse {
+  sessionId: string
+  authenticationUrl: string
+  expiresAt: string
+  status: string
+}
+
+interface CliAuthStatusResponse {
+  sessionId: string
+  status: 'pending' | 'approved' | 'completed' | 'expired'
+  expiresAt: string
+}
+
+interface CliAuthTokenResponse {
+  accessToken: string
+  tokenType: 'Bearer'
+  expiresAt: string
+}
 
 /** Event listener type for auth state changes. */
 export type AuthStateChangeListener = (change: AuthStateChange) => void
@@ -131,6 +154,7 @@ export class AuthService implements TokenProvider {
     if (!token) {
       throw new Error('Access token must not be empty.')
     }
+
     if (!ACCESS_TOKEN_PATTERN.test(token)) {
       throw new Error(
         'That does not look like a WorkflowFiesta access token (expected "wf_…." format). Copy it again from the web app.',
@@ -181,6 +205,29 @@ export class AuthService implements TokenProvider {
 
     await this.credentialStore.setToken(token)
     await this.emitState()
+  }
+
+  async signInWithBrowser(apiUrlOverride?: string, accountName?: string): Promise<boolean> {
+    const codeVerifier = generatePkceVerifier()
+    const codeChallenge = pkceChallengeForVerifier(codeVerifier)
+    const apiBaseUrl = (apiUrlOverride?.trim() || getApiBaseUrl()).replace(/\/+$/, '')
+
+    const started = await requestJson<CliAuthStartResponse>(apiBaseUrl, '/api/cli-auth/start', {
+      codeChallenge,
+      codeChallengeMethod: 'S256',
+      metadata: {
+        client: 'workflowfiesta-cli',
+      },
+    })
+
+    const opened = await openUrl(started.authenticationUrl)
+    if (!opened) {
+      process.stdout.write(`Open this URL to sign in:\n${started.authenticationUrl}\n`)
+    }
+
+    const token = await waitForCliAuthToken(apiBaseUrl, started.sessionId, codeVerifier)
+    await this.signIn(token.accessToken, apiUrlOverride, accountName)
+    return opened
   }
 
   async signOut(): Promise<void> {
@@ -259,3 +306,68 @@ export class AuthService implements TokenProvider {
 }
 
 export { UnauthorizedError }
+
+function base64Url(input: Buffer): string {
+  return input
+    .toString('base64')
+    .replace(/\+/g, '-')
+    .replace(/\//g, '_')
+    .replace(/=+$/, '')
+}
+
+function generatePkceVerifier(): string {
+  return base64Url(randomBytes(32))
+}
+
+function pkceChallengeForVerifier(codeVerifier: string): string {
+  return base64Url(createHash('sha256').update(codeVerifier).digest())
+}
+
+async function requestJson<T>(apiBaseUrl: string, path: string, body?: unknown): Promise<T> {
+  const response = await fetch(`${apiBaseUrl}${path}`, {
+    method: body === undefined ? 'GET' : 'POST',
+    headers: {
+      Accept: 'application/json',
+      ...(body === undefined ? {} : { 'Content-Type': 'application/json' }),
+    },
+    body: body === undefined ? undefined : JSON.stringify(body),
+  })
+
+  const text = await response.text()
+  const payload = text ? JSON.parse(text) as unknown : undefined
+
+  if (!response.ok) {
+    const message
+      = payload && typeof payload === 'object' && typeof (payload as { error?: unknown }).error === 'string'
+        ? (payload as { error: string }).error
+        : `Request failed with status ${response.status}`
+    throw new Error(message)
+  }
+
+  return payload as T
+}
+
+async function waitForCliAuthToken(
+  apiBaseUrl: string,
+  sessionId: string,
+  codeVerifier: string,
+): Promise<CliAuthTokenResponse> {
+  for (let attempt = 0; attempt < CLI_AUTH_MAX_ATTEMPTS; attempt += 1) {
+    const status = await requestJson<CliAuthStatusResponse>(apiBaseUrl, `/api/cli-auth/status/${sessionId}`)
+
+    if (status.status === 'expired') {
+      throw new Error('CLI authentication request expired. Please try again.')
+    }
+
+    if (status.status === 'approved') {
+      return requestJson<CliAuthTokenResponse>(apiBaseUrl, '/api/cli-auth/token', {
+        sessionId,
+        codeVerifier,
+      })
+    }
+
+    await new Promise(resolve => setTimeout(resolve, CLI_AUTH_POLL_INTERVAL_MS))
+  }
+
+  throw new Error('Timed out waiting for browser approval.')
+}

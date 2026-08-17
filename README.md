@@ -44,7 +44,7 @@ wf --continue
 wf -s <conversation-id>
 ```
 
-On first run, you'll be prompted to authenticate with your API token.
+On first run, you'll be prompted to authenticate. Use `wf auth login` to choose browser-based sign-in or access-token sign-in. You can also skip the prompt with `wf auth login --browser` or `wf auth login --token <your-token>`.
 
 ## Features
 

@@ -86,7 +86,7 @@ export function AuthLoginDialog({ authService, onSuccess, onCancel }: AuthLoginP
         </text>
 
         <text attributes={TextAttributes.DIM}>
-          Enter your access token from the WorkflowFiesta web app.
+          Enter an access token, or run `wf auth login` for browser sign-in.
         </text>
 
         <box marginTop={1} flexDirection="column" gap={1}>
@@ -174,9 +174,7 @@ export function WelcomeScreen({ onLogin: _onLogin }: WelcomeScreenProps) {
             to sign in with your access token
           </text>
           <text attributes={TextAttributes.DIM}>
-            or run: wf auth login --token
-            {' '}
-            {'<your-token>'}
+            or run: wf auth login
           </text>
         </box>
       </box>

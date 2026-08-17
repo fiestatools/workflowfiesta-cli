@@ -1,7 +1,4 @@
 import antfu from '@antfu/eslint-config'
-import { createRequire } from 'module';
-
-const require = createRequire(import.meta.url);
 
 export default antfu({
   react: true,
@@ -16,4 +13,4 @@ export default antfu({
     'react-refresh/only-export-components': 'off',
     'react/no-array-index-key': 'off',
   },
-});
+})
