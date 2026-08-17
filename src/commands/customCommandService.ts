@@ -1,7 +1,7 @@
 import type { ApiClient } from '../api'
 import type { CommandConfig } from '../config'
 import type { CommandRegistry } from './registry'
-import type { BulkCreateCommand, BulkCreateResult, RemoteCustomCommand } from './types'
+import type { NewCustomCommand, PublishCommandsResult, RemoteCustomCommand } from './types'
 import { getConfigManager } from '../config'
 import { CUSTOM_COMMAND_SYNC_TTL_MS } from '../constants'
 import { logger } from '../logger'
@@ -129,7 +129,7 @@ export class CustomCommandService {
     const alreadyPublished = this.cache.readPushedSlugs(orgId)
     const remoteSlugs = new Set(remote.map(cmd => cmd.command.toLowerCase()))
     const publishedSlugs: string[] = []
-    const toPublish: BulkCreateCommand[] = []
+    const toPublish: NewCustomCommand[] = []
 
     for (const local of this.localCommands) {
       const slug = local.name.toLowerCase()
@@ -157,7 +157,7 @@ export class CustomCommandService {
 
     let created: RemoteCustomCommand[] = []
     try {
-      const result = await this.api.post<BulkCreateResult>('/external/custom-commands', {
+      const result = await this.api.post<PublishCommandsResult>('/external/custom-commands', {
         commands: toPublish,
       })
       created = result.created

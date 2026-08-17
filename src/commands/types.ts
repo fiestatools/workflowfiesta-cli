@@ -30,7 +30,7 @@ export interface Command {
 }
 
 /** One entry of a `POST /external/custom-commands` payload. */
-export interface BulkCreateCommand {
+export interface NewCustomCommand {
   command: string
   displayName: string
   description?: string
@@ -39,8 +39,8 @@ export interface BulkCreateCommand {
   promptTemplate?: string
 }
 
-/** The result of a bulk create; skipped entries were left untouched. */
-export interface BulkCreateResult {
+/** The response to a publish; skipped entries were left untouched. */
+export interface PublishCommandsResult {
   created: RemoteCustomCommand[]
   skipped: Array<{ command: string, reason: 'exists' | 'agentNotFound', message: string }>
 }
