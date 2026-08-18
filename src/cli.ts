@@ -280,6 +280,7 @@ export async function executeCommand(command: ParsedCommand, services: Services)
         })
         console.error('✗ Failed to sign in:', error instanceof Error ? error.message : error)
         process.exit(1)
+        return true
       }
     }
 
