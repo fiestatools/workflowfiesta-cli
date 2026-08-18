@@ -1,6 +1,7 @@
 import type { RunOptions } from './run'
 import type { Services } from './services'
 import { Command } from 'commander'
+import { logger } from './logger'
 import pkg from '../package.json'
 
 export const CLI_VERSION = pkg.version
@@ -271,6 +272,12 @@ export async function executeCommand(command: ParsedCommand, services: Services)
         process.exit(0)
       }
       catch (error) {
+        logger.error('auth login failed', {
+          error: error instanceof Error ? error.message : String(error),
+          hasToken: !!command.token,
+          hasApiUrlOverride: !!command.apiUrl,
+          accountName: command.name,
+        })
         console.error('✗ Failed to sign in:', error instanceof Error ? error.message : error)
         process.exit(1)
       }
