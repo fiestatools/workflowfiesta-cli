@@ -3,7 +3,6 @@ import type { TokenProvider } from '../api/types'
 import type { CredentialStore, StoredAccount } from './credentialStore'
 import { createHash, randomBytes } from 'node:crypto'
 import { UnauthorizedError } from '../api/errors'
-import { getApiBaseUrl } from '../config/settings'
 import { logger } from '../logger'
 import { openUrl } from '../utils/openUrl'
 
@@ -208,18 +207,26 @@ export class AuthService implements TokenProvider {
   }
 
   async signInWithBrowser(apiUrlOverride?: string, accountName?: string): Promise<boolean> {
+    if (!this.api) {
+      throw new Error('AuthService.useApiClient() must be called before signing in.')
+    }
+
     logger.debug('signInWithBrowser', { hasApiUrlOverride: !!apiUrlOverride, accountName })
     const codeVerifier = generatePkceVerifier()
     const codeChallenge = pkceChallengeForVerifier(codeVerifier)
-    const apiBaseUrl = (apiUrlOverride?.trim() || getApiBaseUrl()).replace(/\/+$/, '')
+    const apiBaseUrl = apiUrlOverride?.trim().replace(/\/+$/, '')
 
-    const started = await requestJson<CliAuthStartResponse>(apiBaseUrl, '/api/cli-auth/start', {
-      codeChallenge,
-      codeChallengeMethod: 'S256',
-      metadata: {
-        client: 'workflowfiesta-cli',
+    const started = await this.api.post<CliAuthStartResponse>(
+      '/api/cli-auth/start',
+      {
+        codeChallenge,
+        codeChallengeMethod: 'S256',
+        metadata: {
+          client: 'workflowfiesta-cli',
+        },
       },
-    })
+      { baseUrl: apiBaseUrl, skipAuth: true },
+    )
     logger.debug('signInWithBrowser session started', {
       sessionId: started.sessionId,
       status: started.status,
@@ -232,7 +239,7 @@ export class AuthService implements TokenProvider {
       process.stdout.write(`Open this URL to sign in:\n${started.authenticationUrl}\n`)
     }
 
-    const token = await waitForCliAuthToken(apiBaseUrl, started.sessionId, codeVerifier)
+    const token = await waitForCliAuthToken(this.api, apiBaseUrl, started.sessionId, codeVerifier)
     logger.debug('signInWithBrowser token received', { sessionId: started.sessionId, expiresAt: token.expiresAt })
     await this.signIn(token.accessToken, apiUrlOverride, accountName)
     return opened
@@ -331,47 +338,31 @@ function pkceChallengeForVerifier(codeVerifier: string): string {
   return base64Url(createHash('sha256').update(codeVerifier).digest())
 }
 
-async function requestJson<T>(apiBaseUrl: string, path: string, body?: unknown): Promise<T> {
-  const response = await fetch(`${apiBaseUrl}${path}`, {
-    method: body === undefined ? 'GET' : 'POST',
-    headers: {
-      Accept: 'application/json',
-      ...(body === undefined ? {} : { 'Content-Type': 'application/json' }),
-    },
-    body: body === undefined ? undefined : JSON.stringify(body),
-  })
-
-  const text = await response.text()
-  const payload = text ? JSON.parse(text) as unknown : undefined
-
-  if (!response.ok) {
-    const message
-      = payload && typeof payload === 'object' && typeof (payload as { error?: unknown }).error === 'string'
-        ? (payload as { error: string }).error
-        : `Request failed with status ${response.status}`
-    throw new Error(message)
-  }
-
-  return payload as T
-}
-
 async function waitForCliAuthToken(
-  apiBaseUrl: string,
+  api: ApiClient,
+  apiBaseUrl: string | undefined,
   sessionId: string,
   codeVerifier: string,
 ): Promise<CliAuthTokenResponse> {
   for (let attempt = 0; attempt < CLI_AUTH_MAX_ATTEMPTS; attempt += 1) {
-    const status = await requestJson<CliAuthStatusResponse>(apiBaseUrl, `/api/cli-auth/status/${sessionId}`)
+    const status = await api.get<CliAuthStatusResponse>(`/api/cli-auth/status/${sessionId}`, {
+      baseUrl: apiBaseUrl,
+      skipAuth: true,
+    })
 
     if (status.status === 'expired') {
       throw new Error('CLI authentication request expired. Please try again.')
     }
 
     if (status.status === 'approved') {
-      return requestJson<CliAuthTokenResponse>(apiBaseUrl, '/api/cli-auth/token', {
-        sessionId,
-        codeVerifier,
-      })
+      return api.post<CliAuthTokenResponse>(
+        '/api/cli-auth/token',
+        {
+          sessionId,
+          codeVerifier,
+        },
+        { baseUrl: apiBaseUrl, skipAuth: true },
+      )
     }
 
     await new Promise(resolve => setTimeout(resolve, CLI_AUTH_POLL_INTERVAL_MS))
