@@ -174,7 +174,7 @@ export function WelcomeScreen({ onLogin: _onLogin }: WelcomeScreenProps) {
             to sign in with your access token
           </text>
           <text attributes={TextAttributes.DIM}>
-            or run: wf auth login
+            or run: wf auth login or wf auth login --token &lt;your-token&gt;
           </text>
         </box>
       </box>
