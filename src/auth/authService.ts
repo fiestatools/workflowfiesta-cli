@@ -208,6 +208,7 @@ export class AuthService implements TokenProvider {
   }
 
   async signInWithBrowser(apiUrlOverride?: string, accountName?: string): Promise<boolean> {
+    logger.debug('signInWithBrowser', { hasApiUrlOverride: !!apiUrlOverride, accountName })
     const codeVerifier = generatePkceVerifier()
     const codeChallenge = pkceChallengeForVerifier(codeVerifier)
     const apiBaseUrl = (apiUrlOverride?.trim() || getApiBaseUrl()).replace(/\/+$/, '')
@@ -219,13 +220,20 @@ export class AuthService implements TokenProvider {
         client: 'workflowfiesta-cli',
       },
     })
+    logger.debug('signInWithBrowser session started', {
+      sessionId: started.sessionId,
+      status: started.status,
+      expiresAt: started.expiresAt,
+    })
 
     const opened = await openUrl(started.authenticationUrl)
+    logger.debug('signInWithBrowser browser open attempted', { opened })
     if (!opened) {
       process.stdout.write(`Open this URL to sign in:\n${started.authenticationUrl}\n`)
     }
 
     const token = await waitForCliAuthToken(apiBaseUrl, started.sessionId, codeVerifier)
+    logger.debug('signInWithBrowser token received', { sessionId: started.sessionId, expiresAt: token.expiresAt })
     await this.signIn(token.accessToken, apiUrlOverride, accountName)
     return opened
   }
