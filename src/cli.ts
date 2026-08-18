@@ -22,7 +22,7 @@ export type ParsedCommand
     | { type: 'uninstall', keepData: boolean, dryRun: boolean, force: boolean }
 
 const COMMAND_SUGGESTIONS: Record<string, string> = {
-  'login': 'wf auth login',
+  'login': 'wf auth login [--token <your-token>]',
   'logout': 'wf auth logout',
   'status': 'wf auth status',
   'signin': 'wf auth login --token <your-token>',
