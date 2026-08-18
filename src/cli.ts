@@ -269,7 +269,7 @@ export async function executeCommand(command: ParsedCommand, services: Services)
         else {
           console.log('✓ Successfully signed in!')
         }
-        process.exit(0)
+        return false
       }
       catch (error) {
         logger.error('auth login failed', {
@@ -281,7 +281,6 @@ export async function executeCommand(command: ParsedCommand, services: Services)
         console.error('✗ Failed to sign in:', error instanceof Error ? error.message : error)
         process.exit(1)
       }
-      return true
     }
 
     case 'auth:logout': {
