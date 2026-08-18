@@ -21,6 +21,8 @@ export interface RequestOptions {
   body?: unknown
   /** Query parameters appended to the URL. */
   query?: QueryParams
+  /** Override the configured API base URL for this request only. */
+  baseUrl?: string
   /** Caller-provided cancellation signal, combined with the internal timeout. */
   signal?: AbortSignal
   /** Overrides the configured timeout for this request only. */
@@ -33,4 +35,6 @@ export interface RequestOptions {
    * no stored session to invalidate — the caller interprets the failure.
    */
   token?: string
+  /** Skip bearer auth entirely, even if a token is stored. */
+  skipAuth?: boolean
 }

@@ -64,11 +64,11 @@ export class ApiClient {
    * @throws {NetworkError} when no response is received (timeout / transport error)
    */
   async request<T>(path: string, options: RequestOptions = {}): Promise<T> {
-    const { method = 'GET', body, query, signal, timeoutMs, token } = options
+    const { method = 'GET', body, query, baseUrl, signal, timeoutMs, token, skipAuth } = options
 
-    const url = await this.buildUrl(path, query)
-    const usingStoredToken = token === undefined
-    const authToken = token ?? (await this.options.tokenProvider.getToken())
+    const url = await this.buildUrl(path, query, baseUrl)
+    const usingStoredToken = token === undefined && !skipAuth
+    const authToken = skipAuth ? undefined : (token ?? (await this.options.tokenProvider.getToken()))
 
     const headers: Record<string, string> = {
       'Accept': 'application/json',
@@ -96,8 +96,8 @@ export class ApiClient {
   }
 
   /** Join the base URL, path, and query into an absolute URL. */
-  private async buildUrl(path: string, query?: QueryParams): Promise<string> {
-    const base = await this.options.getBaseUrl()
+  private async buildUrl(path: string, query?: QueryParams, baseUrl?: string): Promise<string> {
+    const base = baseUrl ?? await this.options.getBaseUrl()
     logger.debug('API request', { base, path })
     const normalizedPath = path.startsWith('/') ? path : `/${path}`
     const url = new URL(`${base}${normalizedPath}`)
