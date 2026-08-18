@@ -20,3 +20,5 @@ export const CONVERSATION_TITLE_MAX_LENGTH = 60
 
 /** Most recent conversations retained in the local history index. */
 export const MAX_STORED_CONVERSATIONS = 50
+
+export const CUSTOM_COMMAND_SYNC_TTL_MS = 10_000

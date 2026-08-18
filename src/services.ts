@@ -1,6 +1,7 @@
 import { ApiClient } from './api'
 import { AuthService, CredentialStore } from './auth'
 import { ChatService } from './chat'
+import { CustomCommandService } from './commands'
 import { createGetApiBaseUrl, createGetWsBaseUrl, getRequestTimeoutMs } from './config'
 import { logger } from './logger'
 import { AgentRunService } from './runs'
@@ -22,6 +23,8 @@ export interface Services {
   settingsService: SettingsService
   /** Chat service. */
   chatService: ChatService
+  /** Loads and syncs custom slash commands. */
+  commandService: CustomCommandService
 }
 
 /**
@@ -72,7 +75,11 @@ export async function initializeServices(): Promise<Services> {
   // Create chat service
   const chatService = new ChatService(runService)
 
+  // Create custom command service
+  const commandService = new CustomCommandService(api)
+  await commandService.loadLocal()
+
   logger.info('Services initialized successfully')
 
-  return { credentialStore, auth, api, runService, settingsService, chatService }
+  return { credentialStore, auth, api, runService, settingsService, chatService, commandService }
 }

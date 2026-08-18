@@ -33,10 +33,22 @@ export function App({ services, continueLastSession, resumeConversationUid, term
 
     return services.auth.onDidChangeAuthentication((change) => {
       const isAuth = change.status === 'signedIn'
-      if (!isAuth && view === 'chat') {
+      if (isAuth) {
+        void services.commandService.reload()
+        return
+      }
+      services.commandService.clear()
+      if (view === 'chat') {
         setView('auth')
       }
     })
+  }, [services, view])
+
+  useEffect(() => {
+    if (!services || view !== 'chat') {
+      return
+    }
+    void services.commandService.sync()
   }, [services, view])
 
   if (!services || view === 'loading') {

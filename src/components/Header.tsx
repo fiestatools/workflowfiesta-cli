@@ -6,10 +6,11 @@ export interface HeaderProps {
   agentName?: string
   isConnected: boolean
   isConnecting: boolean
+  commandSessionLabel?: string
 }
 
 /** Header with branding and connection status. */
-export function Header({ agentName, isConnected, isConnecting }: HeaderProps) {
+export function Header({ agentName, isConnected, isConnecting, commandSessionLabel }: HeaderProps) {
   const statusColor = isConnecting
     ? themeColors.warning
     : isConnected
@@ -34,6 +35,12 @@ export function Header({ agentName, isConnected, isConnecting }: HeaderProps) {
           <span fg={themeColors.textMuted}>
             {' '}
             {agentName}
+          </span>
+        )}
+        {commandSessionLabel && (
+          <span fg={themeColors.warning}>
+            {' · '}
+            {commandSessionLabel}
           </span>
         )}
       </text>

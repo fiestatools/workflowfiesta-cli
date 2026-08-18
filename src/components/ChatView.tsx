@@ -1,9 +1,10 @@
 import type { AuthService, StoredAccount } from '../auth'
 import type { ChatService, ChatState } from '../chat'
-import type { Command } from '../commands'
+import type { Command, CustomCommandService } from '../commands'
 import type { UpdateInfo } from '../installation'
 import type { SettingsService } from '../settings'
 import type { PasteExpandRange } from '../utils/paste-summary'
+import { useCallback } from 'react'
 import { AccessTokenRevealOverlay } from './AccessTokenRevealOverlay'
 import { AccountPicker } from './AccountPicker'
 import { AgentPicker } from './AgentPicker'
@@ -40,6 +41,7 @@ export interface ChatViewProps {
   settingsVisible?: boolean
   authService?: AuthService
   settingsService?: SettingsService
+  commandService?: CustomCommandService
   onToggleSidePanel?: () => void
   onNewChat?: () => void
   onOpenSettings?: () => void
@@ -83,6 +85,7 @@ export function ChatView({
   settingsVisible = false,
   authService,
   settingsService,
+  commandService,
   onToggleSidePanel,
   onNewChat,
   onOpenSettings,
@@ -110,6 +113,14 @@ export function ChatView({
   const handleCommandExecute = (command: Command, args: string) => {
     // Clear the input after command execution
     onInputChange('')
+
+    if (command.isCustom) {
+      const { ok, prompt } = chatService.startCommandSession(command, args)
+      if (ok && prompt) {
+        onInputChange(prompt)
+      }
+      return
+    }
 
     switch (command.name) {
       case 'rename':
@@ -151,6 +162,15 @@ export function ChatView({
       case 'copy':
         void chatService.copyLastReply()
         break
+      case 'exit-command':
+        chatService.endCommandSession()
+        break
+      case 'refresh-commands':
+        void commandService?.sync().then(() => {
+          const count = commandService.countCustomCommands()
+          chatService.addSystemMessage(`Reloaded custom commands (${count} available).`)
+        })
+        break
       case 'theme':
       case 'model':
         // Placeholders owned by the team — no CLI behavior wired up yet.
@@ -164,6 +184,10 @@ export function ChatView({
     onInputChange('')
   }
 
+  const handleCommandPaletteOpen = useCallback(() => {
+    void commandService?.refreshIfStale()
+  }, [commandService])
+
   return (
     <box flexDirection="row" flexGrow={1}>
       {/* Main chat area */}
@@ -172,6 +196,11 @@ export function ChatView({
           agentName={state.currentAgent?.name}
           isConnected={state.isConnected}
           isConnecting={state.isConnecting}
+          commandSessionLabel={
+            state.commandSession
+              ? `${state.commandSession.icon ? `${state.commandSession.icon} ` : ''}${state.commandSession.displayName}`
+              : undefined
+          }
         />
 
         {/* Update notification banner */}
@@ -206,6 +235,7 @@ export function ChatView({
             input={input}
             onExecute={handleCommandExecute}
             onClose={handleCommandClose}
+            onOpen={handleCommandPaletteOpen}
             onInputChange={onInputChange}
           />
         )}
