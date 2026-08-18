@@ -1,8 +1,8 @@
 import type { RunOptions } from './run'
 import type { Services } from './services'
 import { Command } from 'commander'
-import { logger } from './logger'
 import pkg from '../package.json'
+import { logger } from './logger'
 
 export const CLI_VERSION = pkg.version
 
