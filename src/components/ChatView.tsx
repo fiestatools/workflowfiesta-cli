@@ -3,6 +3,7 @@ import type { ChatService, ChatState } from '../chat'
 import type { Command, CustomCommandService } from '../commands'
 import type { UpdateInfo } from '../installation'
 import type { SettingsService } from '../settings'
+import type { Skill } from '../skill'
 import type { PasteExpandRange } from '../utils/paste-summary'
 import { useCallback } from 'react'
 import { AccessTokenRevealOverlay } from './AccessTokenRevealOverlay'
@@ -17,13 +18,14 @@ import { MessageList } from './MessageList'
 import { RequestOverlay } from './RequestOverlay'
 import { SettingsPanel } from './SettingsPanel'
 import { SidePanel } from './SidePanel'
+import { SkillPicker } from './SkillPicker'
 import { StatusBar } from './StatusBar'
 import { StatusDialog } from './StatusDialog'
 
 import { UpdateNotification } from './UpdateNotification'
 
 /** Which command-triggered overlay is currently open, if any. */
-export type OverlayKind = 'agent' | 'account' | 'help' | 'history' | 'status' | null
+export type OverlayKind = 'agent' | 'account' | 'help' | 'history' | 'status' | 'skills' | null
 
 /** Main chat view component props. */
 export interface ChatViewProps {
@@ -67,6 +69,10 @@ export interface ChatViewProps {
   activeAccountName?: string
   /** Callback when user selects a different account. */
   onSwitchAccount?: (accountName: string) => void
+  /** Available skills for the skill picker. */
+  skills?: Skill[]
+  /** Callback when a skill is selected. */
+  onSkillSelect?: (skillName: string) => void
 }
 
 /** Main chat view layout. */
@@ -102,6 +108,8 @@ export function ChatView({
   accounts = [],
   activeAccountName,
   onSwitchAccount,
+  skills = [],
+  onSkillSelect,
 }: ChatViewProps) {
   // The interactive request (if any) the run is parked on takes over the input.
   const activeRequest = state.pendingRequests[0]
@@ -155,6 +163,9 @@ export function ChatView({
         break
       case 'status':
         onOpenOverlay('status')
+        break
+      case 'skills':
+        onOpenOverlay('skills')
         break
       case 'retry':
         onRetry?.()
@@ -290,6 +301,16 @@ export function ChatView({
         )}
         {!activeRequest && !reveal && overlay === 'status' && (
           <StatusDialog state={state} version={version} onClose={onCloseOverlay} />
+        )}
+        {!activeRequest && !reveal && overlay === 'skills' && (
+          <SkillPicker
+            skills={skills}
+            onSelect={(name) => {
+              onSkillSelect?.(name)
+              onCloseOverlay()
+            }}
+            onClose={onCloseOverlay}
+          />
         )}
 
         <InputArea

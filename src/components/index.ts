@@ -73,8 +73,11 @@ export { PROVIDER_TYPES, ProviderTypeSelector } from './ProviderTypeSelector'
 export type { ProviderTypeSelectorProps } from './ProviderTypeSelector'
 export { RequestOverlay } from './RequestOverlay'
 export type { RequestOverlayProps } from './RequestOverlay'
-export { SelectableRow } from './SelectableRow'
+// Searchable overlay
+export { SearchableOverlay } from './SearchableOverlay'
 
+export type { SearchableOverlayItem, SearchableOverlayProps } from './SearchableOverlay'
+export { SelectableRow } from './SelectableRow'
 export type { SelectableRowProps } from './SelectableRow'
 
 // Settings
@@ -83,6 +86,9 @@ export type { SettingsPanelProps } from './SettingsPanel'
 // Side panel
 export { SIDE_PANEL_WIDTH, SidePanel } from './SidePanel'
 export type { SidePanelProps } from './SidePanel'
+// Skills
+export { SkillPicker } from './SkillPicker'
+export type { SkillPickerProps } from './SkillPicker'
 export { SpecialMessage } from './SpecialMessage'
 export type { SpecialMessageProps } from './SpecialMessage'
 export { StatusBar } from './StatusBar'

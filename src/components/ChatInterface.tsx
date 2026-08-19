@@ -179,6 +179,10 @@ export function ChatInterface({ services, continueLastSession, resumeConversatio
       accounts={accounts}
       activeAccountName={activeAccountName}
       onSwitchAccount={handleSwitchAccount}
+      skills={services.skillService.all()}
+      onSkillSelect={(name) => {
+        setInput(`/skill ${name} `)
+      }}
     />
   )
 }

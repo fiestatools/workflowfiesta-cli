@@ -36,6 +36,20 @@ export const AutoupdateSchema = z.union([
   z.literal('notify'),
 ]).describe('Auto-update behavior: true (auto-install patches), false (disabled), or "notify" (only notify)')
 
+export const SkillsCloudConfigSchema = z.object({
+  autoSync: z.boolean().optional().describe('Pull latest cloud skills on startup'),
+  org: z.string().optional().describe('Default org for skill publish'),
+  installed: z.array(z.string()).optional().describe('Pinned cloud skills (e.g., "react-testing@^1.0.0")'),
+})
+
+export const SkillsConfigSchema = z.object({
+  paths: z.array(z.string()).optional().describe('Additional directories to scan for skills'),
+  cloud: SkillsCloudConfigSchema.optional().describe('Cloud skill configuration'),
+  disableExternal: z.boolean().optional().describe('Skip .agents/ and .claude/ directories'),
+})
+
+export type SkillsConfig = z.infer<typeof SkillsConfigSchema>
+
 export const WorkflowfiestaConfigSchema = z.object({
   apiBaseUrl: z.string().url().optional().describe('Base URL of the WorkflowFiesta backend API'),
   requestTimeoutMs: z.number().positive().int().optional().describe('Timeout in milliseconds for API requests'),
@@ -60,6 +74,7 @@ export const WorkflowfiestaConfigSchema = z.object({
   installScriptUrl: z.string().url().optional().describe('URL of the install script for curl-based upgrades'),
   agents: z.record(AgentConfigSchema).optional().describe('Custom agent configurations'),
   commands: z.record(CommandConfigSchema).optional().describe('Custom command configurations'),
+  skills: SkillsConfigSchema.optional().describe('Skill discovery and cloud configuration'),
 })
 
 export type WorkflowfiestaConfig = z.infer<typeof WorkflowfiestaConfigSchema>

@@ -20,6 +20,10 @@ export type ParsedCommand
     | { type: 'config:set', key: string, value: string }
     | { type: 'upgrade', target?: string, method?: 'curl' | 'brew' }
     | { type: 'uninstall', keepData: boolean, dryRun: boolean, force: boolean }
+    | { type: 'skill:list' }
+    | { type: 'skill:show', name: string }
+    | { type: 'skill:create', name: string, description: string }
+    | { type: 'skill:validate', path: string }
 
 const COMMAND_SUGGESTIONS: Record<string, string> = {
   'login': 'wf auth login [--token <your-token>]',
@@ -130,6 +134,28 @@ export function createProgram(): Command {
     .option('--dry-run', 'Show what would be removed without removing', false)
     .option('-f, --force', 'Skip confirmation prompt', false)
 
+  const skill = program
+    .command('skill')
+    .description('Manage skills (modular agent instruction bundles)')
+
+  skill
+    .command('list')
+    .alias('ls')
+    .description('List all discovered skills (local + cloud-installed)')
+
+  skill
+    .command('show <name>')
+    .description('Show skill details and content')
+
+  skill
+    .command('create <name>')
+    .description('Scaffold a new skill directory')
+    .option('-d, --description <desc>', 'Short description', 'A new skill')
+
+  skill
+    .command('validate [path]')
+    .description('Validate a SKILL.md file')
+
   return program
 }
 
@@ -212,6 +238,20 @@ export function parseArgs(): ParsedCommand {
       dryRun: opts.dryRun ?? false,
       force: opts.force ?? false,
     }
+  })
+
+  const skillCmd = program.commands.find(c => c.name() === 'skill')
+  skillCmd?.commands.find(c => c.name() === 'list')?.action(() => {
+    result = { type: 'skill:list' }
+  })
+  skillCmd?.commands.find(c => c.name() === 'show')?.action((name) => {
+    result = { type: 'skill:show', name }
+  })
+  skillCmd?.commands.find(c => c.name() === 'create')?.action((name, opts) => {
+    result = { type: 'skill:create', name, description: opts.description ?? 'A new skill' }
+  })
+  skillCmd?.commands.find(c => c.name() === 'validate')?.action((path) => {
+    result = { type: 'skill:validate', path: path ?? 'SKILL.md' }
   })
 
   program.showHelpAfterError(false)
@@ -434,6 +474,89 @@ export async function executeCommand(command: ParsedCommand, services: Services)
     case 'run': {
       const { runCommand } = await import('./run')
       await runCommand(command.message, command.options, services)
+      return true
+    }
+
+    case 'skill:list': {
+      const { getSkillService } = await import('./skill')
+      const skillService = getSkillService()
+      await skillService.loadAll()
+      const skills = skillService.all()
+      if (skills.length === 0) {
+        console.log('No skills found.')
+        console.log('  Create one with: wf skill create <name>')
+        console.log('  Skills are loaded from .agents/skills/ and .claude/skills/')
+      }
+      else {
+        const maxName = Math.max(...skills.map(s => s.name.length))
+        const maxSource = Math.max(...skills.map(s => s.source.length))
+        for (const skill of skills) {
+          const ver = skill.frontmatter.version ? ` v${skill.frontmatter.version}` : ''
+          console.log(
+            `  ${skill.name.padEnd(maxName)}  ${skill.source.padEnd(maxSource)}  ${skill.description}${ver}`,
+          )
+        }
+        console.log(`\n  ${skills.length} skill(s) found.`)
+      }
+      process.exit(0)
+      return true
+    }
+
+    case 'skill:show': {
+      const { getSkillService } = await import('./skill')
+      const skillService = getSkillService()
+      await skillService.loadAll()
+      const skill = skillService.get(command.name)
+      if (!skill) {
+        console.error(`Skill "${command.name}" not found.`)
+        console.error('  Run: wf skill list')
+        process.exit(1)
+      }
+      console.log(`Name:        ${skill.name}`)
+      console.log(`Description: ${skill.description}`)
+      console.log(`Source:      ${skill.source}`)
+      console.log(`Path:        ${skill.path}`)
+      if (skill.frontmatter.version)
+        console.log(`Version:     ${skill.frontmatter.version}`)
+      if (skill.frontmatter.author)
+        console.log(`Author:      ${skill.frontmatter.author}`)
+      if (skill.frontmatter.tags?.length)
+        console.log(`Tags:        ${skill.frontmatter.tags.join(', ')}`)
+      if (skill.frontmatter.tools?.length)
+        console.log(`Tools:       ${skill.frontmatter.tools.join(', ')}`)
+      console.log(`\n--- Content ---\n`)
+      console.log(skill.body)
+      process.exit(0)
+      return true
+    }
+
+    case 'skill:create': {
+      const { getSkillService } = await import('./skill')
+      const skillService = getSkillService()
+      const dir = await skillService.create(command.name, command.description)
+      console.log(`✓ Created skill "${command.name}" at ${dir}`)
+      console.log(`  Edit ${dir}/SKILL.md to add instructions.`)
+      process.exit(0)
+      return true
+    }
+
+    case 'skill:validate': {
+      const { resolve } = await import('node:path')
+      const { getSkillService } = await import('./skill')
+      const skillService = getSkillService()
+      const absPath = resolve(command.path)
+      const result = await skillService.validate(absPath)
+      if (result.valid) {
+        console.log(`✓ ${absPath} is valid.`)
+      }
+      else {
+        console.error(`✗ ${absPath} has errors:`)
+        for (const err of result.errors) {
+          console.error(`  - ${err}`)
+        }
+        process.exit(1)
+      }
+      process.exit(0)
       return true
     }
 

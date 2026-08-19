@@ -2,7 +2,6 @@ import type { Command } from './types'
 
 /** All built-in commands. */
 export const BUILTIN_COMMANDS: Command[] = [
-  // Chat commands
   {
     name: 'new',
     alias: 'n',
@@ -106,6 +105,11 @@ export const BUILTIN_COMMANDS: Command[] = [
     name: 'status',
     description: 'Show current status',
     category: 'help',
+  },
+  {
+    name: 'skills',
+    description: 'Browse and load agent skills',
+    category: 'settings',
   },
 ].map(command => ({ ...command, source: 'builtin' }) as Command)
 
