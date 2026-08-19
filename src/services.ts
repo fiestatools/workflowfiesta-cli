@@ -6,6 +6,7 @@ import { createGetApiBaseUrl, createGetWsBaseUrl, getRequestTimeoutMs } from './
 import { logger } from './logger'
 import { AgentRunService } from './runs'
 import { SettingsService } from './settings'
+import { SkillService } from './skill'
 
 /**
  * Application services initialized on startup.
@@ -25,6 +26,8 @@ export interface Services {
   chatService: ChatService
   /** Loads and syncs custom slash commands. */
   commandService: CustomCommandService
+  /** Skill discovery and management. */
+  skillService: SkillService
 }
 
 /**
@@ -79,7 +82,11 @@ export async function initializeServices(): Promise<Services> {
   const commandService = new CustomCommandService(api)
   await commandService.loadLocal()
 
+  // Create skill service and load skills from filesystem
+  const skillService = new SkillService()
+  await skillService.loadAll()
+
   logger.info('Services initialized successfully')
 
-  return { credentialStore, auth, api, runService, settingsService, chatService, commandService }
+  return { credentialStore, auth, api, runService, settingsService, chatService, commandService, skillService }
 }
