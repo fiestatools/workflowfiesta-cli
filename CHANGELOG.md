@@ -1,5 +1,11 @@
 # @workflowfiesta/cli
 
+## 0.19.0
+
+### Minor Changes
+
+- [#98](https://github.com/fiestatools/workflowfiesta-cli/pull/98) [`e39d409`](https://github.com/fiestatools/workflowfiesta-cli/commit/e39d4092712950b5f6b878f18e5c9a2dff5b9ac7) Thanks [@awaitimport](https://github.com/awaitimport)! - Add skill discovery
+
 ## 0.18.0
 
 ### Minor Changes
