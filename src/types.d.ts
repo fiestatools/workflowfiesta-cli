@@ -22,6 +22,8 @@ declare namespace NodeJS {
     WORKFLOWFIESTA_API_URL?: string
     /** WorkflowFiesta access token override. */
     WORKFLOWFIESTA_TOKEN?: string
+    /** Import Claude settings on first run: true/false/1/0/yes/no. */
+    WORKFLOWFIESTA_IMPORT_CLAUDE?: string
     /** Enable debug logging. */
     DEBUG?: string
   }

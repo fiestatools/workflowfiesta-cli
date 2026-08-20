@@ -83,6 +83,9 @@ export type { SelectableRowProps } from './SelectableRow'
 // Settings
 export { SettingsPanel } from './SettingsPanel'
 export type { SettingsPanelProps } from './SettingsPanel'
+// Setup wizard
+export { SetupWizard } from './SetupWizard'
+export type { SetupWizardProps } from './SetupWizard'
 // Side panel
 export { SIDE_PANEL_WIDTH, SidePanel } from './SidePanel'
 export type { SidePanelProps } from './SidePanel'

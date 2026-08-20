@@ -59,6 +59,7 @@ export function App({ services, continueLastSession, resumeConversationUid, term
     return (
       <AuthGate
         authService={services.auth}
+        credentialStore={services.credentialStore}
         onAuthenticated={() => setView('chat')}
       />
     )
