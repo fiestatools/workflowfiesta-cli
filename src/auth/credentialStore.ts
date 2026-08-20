@@ -36,6 +36,10 @@ export class CredentialStore {
     }
   }
 
+  isFirstRun(): boolean {
+    return !existsSync(this.credentialsPath)
+  }
+
   /** Get the stored access token for the active account. */
   async getToken(): Promise<string | undefined> {
     const credentials = this.readCredentials()

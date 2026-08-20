@@ -1,10 +1,11 @@
 import type { InputProps } from '@opentui/react'
-import type { AuthService } from '../auth'
+import type { AuthService, CredentialStore } from '../auth'
 import { TextAttributes } from '@opentui/core'
 import { useKeyboard } from '@opentui/react'
 import { useCallback, useState } from 'react'
 import { BRAND_ORANGE, themeColors } from '../theme'
 import { PasswordInput } from './PasswordInput'
+import { SetupWizard } from './SetupWizard'
 
 export interface AuthLoginProps {
   authService: AuthService
@@ -182,22 +183,31 @@ export function WelcomeScreen({ onLogin: _onLogin }: WelcomeScreenProps) {
   )
 }
 
-/** Props for the AuthGate component. */
 export interface AuthGateProps {
   authService: AuthService
+  credentialStore: CredentialStore
   onAuthenticated: () => void
 }
 
-/** Auth gate that shows welcome screen or login dialog. */
-export function AuthGate({ authService, onAuthenticated }: AuthGateProps) {
+export function AuthGate({ authService, credentialStore, onAuthenticated }: AuthGateProps) {
   const [showLoginDialog, setShowLoginDialog] = useState(false)
+  const [isFirstRun] = useState(() => credentialStore.isFirstRun())
 
   // Handle 'L' key to open login dialog (only when not already showing it)
   useKeyboard((key) => {
-    if (!showLoginDialog && (key.name === 'l' || key.name === 'L')) {
+    if (!isFirstRun && !showLoginDialog && (key.name === 'l' || key.name === 'L')) {
       setShowLoginDialog(true)
     }
   })
+
+  if (isFirstRun) {
+    return (
+      <SetupWizard
+        authService={authService}
+        onAuthenticated={onAuthenticated}
+      />
+    )
+  }
 
   if (showLoginDialog) {
     return (
