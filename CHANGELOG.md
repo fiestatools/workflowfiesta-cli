@@ -1,5 +1,13 @@
 # @workflowfiesta/cli
 
+## 0.21.0
+
+### Minor Changes
+
+- [#103](https://github.com/fiestatools/workflowfiesta-cli/pull/103) [`0fc5d64`](https://github.com/fiestatools/workflowfiesta-cli/commit/0fc5d641e4a5e2824f9f6df81353fe153790e419) Thanks [@awaitimport](https://github.com/awaitimport)! - Add skill sync between CLI and backend
+
+- [#105](https://github.com/fiestatools/workflowfiesta-cli/pull/105) [`9edd3c2`](https://github.com/fiestatools/workflowfiesta-cli/commit/9edd3c25468612310f24feb3ef242b5bedc95203) Thanks [@awaitimport](https://github.com/awaitimport)! - Change skill sync endpoint to use http PUT
+
 ## 0.20.0
 
 ### Minor Changes
