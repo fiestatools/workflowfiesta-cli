@@ -24,6 +24,7 @@ export type ParsedCommand
     | { type: 'skill:show', name: string }
     | { type: 'skill:create', name: string, description: string }
     | { type: 'skill:validate', path: string }
+    | { type: 'skill:sync' }
 
 const COMMAND_SUGGESTIONS: Record<string, string> = {
   'login': 'wf auth login [--token <your-token>]',
@@ -156,6 +157,10 @@ export function createProgram(): Command {
     .command('validate [path]')
     .description('Validate a SKILL.md file')
 
+  skill
+    .command('sync')
+    .description('Sync local skills with the cloud (push local, pull remote)')
+
   return program
 }
 
@@ -252,6 +257,9 @@ export function parseArgs(): ParsedCommand {
   })
   skillCmd?.commands.find(c => c.name() === 'validate')?.action((path) => {
     result = { type: 'skill:validate', path: path ?? 'SKILL.md' }
+  })
+  skillCmd?.commands.find(c => c.name() === 'sync')?.action(() => {
+    result = { type: 'skill:sync' }
   })
 
   program.showHelpAfterError(false)
@@ -555,6 +563,33 @@ export async function executeCommand(command: ParsedCommand, services: Services)
           console.error(`  - ${err}`)
         }
         process.exit(1)
+      }
+      process.exit(0)
+      return true
+    }
+
+    case 'skill:sync': {
+      const { getSkillService, SkillCloudClient } = await import('./skill')
+      const skillService = getSkillService()
+      await skillService.loadAll()
+      const localSkills = skillService.all()
+      const cloud = new SkillCloudClient(services.api)
+      const result = await cloud.sync(localSkills)
+
+      if (result.uploaded.length > 0) {
+        console.log(`↑ Uploaded ${result.uploaded.length} skill(s):`)
+        for (const name of result.uploaded) {
+          console.log(`    ${name}`)
+        }
+      }
+      if (result.downloaded.length > 0) {
+        console.log(`↓ Downloaded ${result.downloaded.length} skill(s):`)
+        for (const name of result.downloaded) {
+          console.log(`    ${name}`)
+        }
+      }
+      if (result.uploaded.length === 0 && result.downloaded.length === 0) {
+        console.log('✓ Skills are in sync. No changes needed.')
       }
       process.exit(0)
       return true

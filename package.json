@@ -39,6 +39,7 @@
   "dependencies": {
     "@opentui/core": "^0.4.3",
     "@opentui/react": "^0.4.3",
+    "@sindresorhus/slugify": "^3.0.0",
     "commander": "^15.0.0",
     "deepmerge": "^4.3.1",
     "find-up": "^8.0.0",

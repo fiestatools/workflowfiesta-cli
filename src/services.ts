@@ -2,31 +2,20 @@ import { ApiClient } from './api'
 import { AuthService, CredentialStore } from './auth'
 import { ChatService } from './chat'
 import { CustomCommandService } from './commands'
-import { createGetApiBaseUrl, createGetWsBaseUrl, getRequestTimeoutMs } from './config'
+import { createGetApiBaseUrl, createGetWsBaseUrl, getConfigManager, getRequestTimeoutMs } from './config'
 import { logger } from './logger'
 import { AgentRunService } from './runs'
 import { SettingsService } from './settings'
-import { SkillService } from './skill'
+import { SkillCloudClient, SkillService } from './skill'
 
-/**
- * Application services initialized on startup.
- */
 export interface Services {
-  /** Credential storage for auth tokens. */
   credentialStore: CredentialStore
-  /** Authentication service. */
   auth: AuthService
-  /** HTTP API client. */
   api: ApiClient
-  /** Agent run service. */
   runService: AgentRunService
-  /** Settings/identity service. */
   settingsService: SettingsService
-  /** Chat service. */
   chatService: ChatService
-  /** Loads and syncs custom slash commands. */
   commandService: CustomCommandService
-  /** Skill discovery and management. */
   skillService: SkillService
 }
 
@@ -42,13 +31,8 @@ export interface Services {
 export async function initializeServices(): Promise<Services> {
   logger.info('Initializing services')
 
-  // Create credential store
   const credentialStore = new CredentialStore()
-
-  // Create auth service
   const auth = new AuthService(credentialStore)
-
-  // Create API client
   const api = new ApiClient({
     getBaseUrl: createGetApiBaseUrl(auth),
     getTimeoutMs: getRequestTimeoutMs,
@@ -59,32 +43,29 @@ export async function initializeServices(): Promise<Services> {
     },
   })
 
-  // Wire API client back to auth service for token validation
   auth.useApiClient(api)
-
-  // Initialize auth service (loads current state)
   await auth.initialize()
-
-  // Create run service
   const runService = new AgentRunService(
     api,
     createGetWsBaseUrl(auth),
     createGetApiBaseUrl(auth),
   )
-
-  // Create settings service
   const settingsService = new SettingsService(api)
-
-  // Create chat service
   const chatService = new ChatService(runService)
-
-  // Create custom command service
   const commandService = new CustomCommandService(api)
   await commandService.loadLocal()
-
-  // Create skill service and load skills from filesystem
   const skillService = new SkillService()
   await skillService.loadAll()
+
+  if (await auth.isAuthenticated()) {
+    const config = await getConfigManager().getConfigAsync()
+    if (config.skills?.cloud?.autoSync !== false) {
+      const cloud = new SkillCloudClient(api)
+      cloud.sync(skillService.all()).catch((err) => {
+        logger.warn(`Background skill sync failed: ${err instanceof Error ? err.message : String(err)}`)
+      })
+    }
+  }
 
   logger.info('Services initialized successfully')
 
