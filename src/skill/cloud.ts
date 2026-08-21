@@ -85,7 +85,7 @@ export class SkillCloudClient {
    * Sync local skills with the backend.
    *
    * 1. Loads all local skills from the registry.
-   * 2. Pushes them to the backend via `POST /external/skills/sync`.
+   * 2. Pushes them to the backend via `PUT /external/skills`.
    * 3. Downloads any remote-only skills (on the server but not locally)
    *    into `~/.agents/skills/`.
    */
@@ -107,7 +107,7 @@ export class SkillCloudClient {
         tags: skill.frontmatter.tags ?? [],
       }))
 
-      const result = await this.api.post<SyncSkillsResponse>('/external/skills/sync', {
+      const result = await this.api.put<SyncSkillsResponse>('/external/skills', {
         skills: payload,
       })
 
