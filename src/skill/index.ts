@@ -35,7 +35,8 @@ export interface SkillLoadError {
   message: string
 }
 
-export type { CloudSkillMeta, PublishOpts } from './cloud'
+export type { CloudSkillMeta, PublishOpts, RemoteSkill, SyncResult, SyncSkillsResponse } from './cloud'
+export { SkillCloudClient } from './cloud'
 export { discoverSkillPaths, type DiscoveryLocation } from './discovery'
 export { loadSkill, parseFrontmatter } from './loader'
 export { getSkillRegistry, resetSkillRegistry, SkillRegistry } from './registry'
