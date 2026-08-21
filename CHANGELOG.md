@@ -1,5 +1,15 @@
 # @workflowfiesta/cli
 
+## 0.20.0
+
+### Minor Changes
+
+- [#100](https://github.com/fiestatools/workflowfiesta-cli/pull/100) [`b1809af`](https://github.com/fiestatools/workflowfiesta-cli/commit/b1809afe08d2eb6699591d99ac7c559e66fcd700) Thanks [@awaitimport](https://github.com/awaitimport)! - Adds a two-step setup wizard shown on first launch
+
+### Patch Changes
+
+- [#102](https://github.com/fiestatools/workflowfiesta-cli/pull/102) [`17c1311`](https://github.com/fiestatools/workflowfiesta-cli/commit/17c1311e4baac3fc3aee30b081ea963cb17be3cd) Thanks [@awaitimport](https://github.com/awaitimport)! - Fix CLI auth api url resolution. Now CLI respects WORKFLOWFIESTA_API_URL along with config file and finally fallbacks to production api endpoint.
+
 ## 0.19.0
 
 ### Minor Changes
