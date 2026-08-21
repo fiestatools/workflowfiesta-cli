@@ -217,6 +217,10 @@ export function resetConfigManager(): void {
 }
 
 export function getApiBaseUrl(): string {
+  const envUrl = process.env.WORKFLOWFIESTA_API_URL?.trim()
+  if (envUrl) {
+    return envUrl.replace(/\/+$/, '')
+  }
   const config = getConfigManager().getConfig()
   const raw = config.apiBaseUrl?.trim() || DEFAULT_API_BASE_URL
   return raw.replace(/\/+$/, '')

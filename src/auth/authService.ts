@@ -204,17 +204,24 @@ export class AuthService implements TokenProvider {
     const codeChallenge = pkceChallengeForVerifier(codeVerifier)
     const apiBaseUrl = apiUrlOverride?.trim().replace(/\/+$/, '')
 
-    const started = await this.api.post<CliAuthStartResponse>(
-      '/api/cli-auth/start',
-      {
-        codeChallenge,
-        codeChallengeMethod: 'S256',
-        metadata: {
-          client: 'workflowfiesta-cli',
+    let started: CliAuthStartResponse
+    try {
+      started = await this.api.post<CliAuthStartResponse>(
+        '/api/cli-auth/start',
+        {
+          codeChallenge,
+          codeChallengeMethod: 'S256',
+          metadata: {
+            client: 'workflowfiesta-cli',
+          },
         },
-      },
-      { baseUrl: apiBaseUrl, skipAuth: true },
-    )
+        { baseUrl: apiBaseUrl, skipAuth: true },
+      )
+    }
+    catch (err) {
+      logger.error('Failed to start CLI auth session', { error: err, apiBaseUrl })
+      throw err
+    }
     logger.debug('signInWithBrowser session started', {
       sessionId: started.sessionId,
       status: started.status,
