@@ -1,6 +1,6 @@
 import { TextAttributes } from '@opentui/core'
 import { useKeyboard } from '@opentui/react'
-import { COMMANDS } from '../commands'
+import { COMMANDS } from '../slash-commands'
 import { themeColors } from '../theme'
 import { OverlayContainer } from './OverlayContainer'
 

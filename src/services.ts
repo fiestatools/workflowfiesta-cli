@@ -1,12 +1,12 @@
 import { ApiClient } from './api'
 import { AuthService, CredentialStore } from './auth'
 import { ChatService } from './chat'
-import { CustomCommandService } from './commands'
 import { createGetApiBaseUrl, createGetWsBaseUrl, getConfigManager, getRequestTimeoutMs } from './config'
 import { logger } from './logger'
 import { AgentRunService } from './runs'
 import { SettingsService } from './settings'
 import { SkillCloudClient, SkillService } from './skill'
+import { CustomCommandService } from './slash-commands'
 
 export interface Services {
   credentialStore: CredentialStore

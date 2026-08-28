@@ -1,4 +1,3 @@
-import type { Command } from '../commands'
 import type { StoredConversation } from '../config'
 import type { ActiveRun, AgentRunService, AgentSummary, RunEvent } from '../runs'
 import type {
@@ -12,8 +11,8 @@ import type {
   SpecialMessage,
   SpecialMessageType,
 } from '../runs/runEvents'
+import type { Command } from '../slash-commands'
 import type { PollHandle } from '../utils/poller'
-import { renderPromptTemplate } from '../commands'
 import { ConversationStore } from '../config'
 import {
   CONVERSATION_TITLE_MAX_LENGTH,
@@ -22,6 +21,7 @@ import {
 } from '../constants'
 import { logger } from '../logger'
 import { parseSpecialMessage } from '../runs/runEvents'
+import { renderPromptTemplate } from '../slash-commands'
 import { copyToClipboard } from '../utils/clipboard'
 import { openUrl } from '../utils/openUrl'
 import { startPolling } from '../utils/poller'

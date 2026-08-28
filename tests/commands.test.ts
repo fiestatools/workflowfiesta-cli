@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'bun:test'
-import { filterCommands, findCommand, parseCommandInput } from '../src/commands'
+import { filterCommands, findCommand, parseCommandInput } from '../src/slash-commands'
 
 describe('parseCommandInput', () => {
   it('splits the command word from its arguments', () => {
