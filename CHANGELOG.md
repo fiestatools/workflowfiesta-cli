@@ -1,5 +1,17 @@
 # @workflowfiesta/cli
 
+## 0.22.0
+
+### Minor Changes
+
+- [#109](https://github.com/fiestatools/workflowfiesta-cli/pull/109) [`b06be65`](https://github.com/fiestatools/workflowfiesta-cli/commit/b06be65f123b3b3e10e2df5cc4e75efc4c467477) Thanks [@awaitimport](https://github.com/awaitimport)! - Add skill install command to install skills from GitHub repositories or local paths.
+
+### Patch Changes
+
+- [#108](https://github.com/fiestatools/workflowfiesta-cli/pull/108) [`bdcc1a7`](https://github.com/fiestatools/workflowfiesta-cli/commit/bdcc1a7976670f64be750f1e9d18f02d84999c80) Thanks [@awaitimport](https://github.com/awaitimport)! - Move slash commands to new folder called slash-commands and refactor CLI handers to commands
+
+- [#106](https://github.com/fiestatools/workflowfiesta-cli/pull/106) [`9bffe82`](https://github.com/fiestatools/workflowfiesta-cli/commit/9bffe8234f2883df1e5f01f46793cc1f89d92671) Thanks [@awaitimport](https://github.com/awaitimport)! - Improve CLI logging and add post-upgrade welcome message with release notes links
+
 ## 0.21.0
 
 ### Minor Changes
