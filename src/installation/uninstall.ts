@@ -3,9 +3,8 @@ import type { UninstallTargets } from './targets'
 import { spawn } from 'node:child_process'
 import { existsSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { dirname } from 'node:path'
-import ora from 'ora'
-import prompts from 'prompts'
-import { muted, warning } from '../theme'
+import { confirm, log, spinner } from '@clack/prompts'
+import color from 'picocolors'
 import { UPGRADE_COMMAND_TIMEOUT_MS } from './constants'
 import { detectInstallationMethod } from './detection'
 import { UninstallFailedError } from './errors'
@@ -191,25 +190,24 @@ async function uninstallBrew(detection: DetectionResult): Promise<void> {
 }
 
 /**
- * Print the removal summary before executing using ora.
+ * Print the removal summary before executing using clack log.
  */
 function printSummary(
   targets: UninstallTargets,
   options: UninstallOptions,
   method: InstallationMethod,
-  spinner: ReturnType<typeof ora>,
 ): void {
-  const prefix = options.dryRun ? `${muted('[Dry Run]')} ` : ''
+  const prefix = options.dryRun ? `${color.dim('[Dry Run]')} ` : ''
 
-  spinner.info(`${prefix}The following will be removed:`)
+  log.info(`${prefix}The following will be removed:`)
 
   // Config directory
   if (existsSync(targets.configDir)) {
     if (options.keepData) {
-      spinner.info(`  ${muted('*')} Configuration: ${targets.configDir} ${muted('(excluding conversations.json)')}`)
+      log.message(`  ${color.dim('*')} Configuration: ${targets.configDir} ${color.dim('(excluding conversations.json)')}`, { symbol: ' ' })
     }
     else {
-      spinner.info(`  ${muted('*')} Configuration: ${targets.configDir}`)
+      log.message(`  ${color.dim('*')} Configuration: ${targets.configDir}`, { symbol: ' ' })
     }
   }
 
@@ -223,38 +221,37 @@ function printSummary(
 
   if (shellConfigsWithEntries.length > 0) {
     const paths = shellConfigsWithEntries.map(c => c.path.replace(process.env.HOME || '', '~')).join(', ')
-    spinner.info(`  ${muted('*')} Shell configs: PATH entries from ${paths}`)
+    log.message(`  ${color.dim('*')} Shell configs: PATH entries from ${paths}`, { symbol: ' ' })
   }
 
   // Kept items
   if (options.keepData && existsSync(targets.dataFile)) {
-    spinner.info(`${prefix}The following will be kept:`)
-    spinner.info(`  ${muted('*')} Data: ${targets.dataFile}`)
+    log.info(`${prefix}The following will be kept:`)
+    log.message(`  ${color.dim('*')} Data: ${targets.dataFile}`, { symbol: ' ' })
   }
 
   // Manual steps for curl installs
   if ((method === 'curl' || method === 'unknown') && targets.binaryPath) {
-    spinner.warn(`${prefix}Manual removal required:`)
-    spinner.info(`  ${muted('*')} Binary: ${targets.binaryPath}`)
-    spinner.info(`  ${muted('*')} Directory: ${getWorkflowfiestaDir()}`)
+    log.warn(`${prefix}Manual removal required:`)
+    log.message(`  ${color.dim('*')} Binary: ${targets.binaryPath}`, { symbol: ' ' })
+    log.message(`  ${color.dim('*')} Directory: ${getWorkflowfiestaDir()}`, { symbol: ' ' })
   }
 }
 
 /**
- * Print the final manual steps and thank you message using ora.
+ * Print the final manual steps and thank you message using clack log.
  */
 function printFinalMessage(
   manualSteps: string[],
-  spinner: ReturnType<typeof ora>,
 ): void {
   if (manualSteps.length > 0) {
-    spinner.info('To complete the uninstallation, run:')
+    log.info('To complete the uninstallation, run:')
     for (const step of manualSteps) {
-      spinner.info(`  ${step}`)
+      log.message(`  ${step}`, { symbol: ' ' })
     }
   }
 
-  spinner.info(muted('Thank you for using WorkflowFiesta!'))
+  log.message(color.dim('Thank you for using WorkflowFiesta!'), { symbol: ' ' })
 }
 
 /**
@@ -262,19 +259,17 @@ function printFinalMessage(
  * Returns true if confirmed, false if cancelled.
  */
 async function promptConfirmation(): Promise<boolean> {
-  const response = await prompts({
-    type: 'confirm',
-    name: 'confirm',
+  const response = await confirm({
     message: 'Are you sure you want to uninstall WorkflowFiesta CLI?',
-    initial: false,
+    initialValue: false,
   })
 
   // Handle Ctrl+C or other cancellation
-  if (response.confirm === undefined) {
+  if (response === undefined || typeof response === 'symbol') {
     return false
   }
 
-  return response.confirm
+  return response
 }
 
 /**
@@ -283,14 +278,11 @@ async function promptConfirmation(): Promise<boolean> {
 export async function uninstall(options: UninstallOptions): Promise<UninstallResult> {
   const { keepData, dryRun, force } = options
 
-  // Create spinner instance for logging
-  const spinner = ora()
-
   // Step 1: Confirmation (unless --force or --dry-run)
   if (!force && !dryRun) {
     const confirmed = await promptConfirmation()
     if (!confirmed) {
-      spinner.warn(warning('Uninstall cancelled.'))
+      log.warn('Uninstall cancelled.')
       return {
         success: false,
         method: 'unknown',
@@ -310,11 +302,11 @@ export async function uninstall(options: UninstallOptions): Promise<UninstallRes
   const targets = getUninstallTargets(method, detection.execPath)
 
   // Step 4: Show summary
-  printSummary(targets, options, method, spinner)
+  printSummary(targets, options, method)
 
   // If dry run, stop here
   if (dryRun) {
-    spinner.info(muted('No changes were made.'))
+    log.info(color.dim('No changes were made.'))
     return {
       success: true,
       method,
@@ -326,7 +318,8 @@ export async function uninstall(options: UninstallOptions): Promise<UninstallRes
   }
 
   // Step 5: Execute uninstall
-  spinner.start('Uninstalling WorkflowFiesta CLI...')
+  const s = spinner()
+  s.start('Uninstalling WorkflowFiesta CLI...')
 
   const removedPaths: string[] = []
   const skippedPaths: string[] = []
@@ -335,12 +328,12 @@ export async function uninstall(options: UninstallOptions): Promise<UninstallRes
   try {
     // For brew: run the uninstall command first
     if (method === 'brew') {
-      spinner.text = 'Running brew uninstall...'
+      s.message('Running brew uninstall...')
       await uninstallBrew(detection)
     }
 
     // Clean shell configs (for both brew and curl)
-    spinner.text = 'Cleaning shell configurations...'
+    s.message('Cleaning shell configurations...')
     for (const config of targets.shellConfigs) {
       const result = cleanShellConfig(config.path, false)
       if (result.cleaned) {
@@ -349,21 +342,21 @@ export async function uninstall(options: UninstallOptions): Promise<UninstallRes
     }
 
     // Remove config directory (for both brew and curl - brew doesn't touch this)
-    spinner.text = 'Removing configuration files...'
+    s.message('Removing configuration files...')
     const configResult = removeConfigDir(targets.configDir, targets.dataFile, keepData, false)
     removedPaths.push(...configResult.removed)
     skippedPaths.push(...configResult.skipped)
 
-    spinner.succeed('Uninstalled successfully')
+    s.stop('Uninstalled successfully')
   }
   catch (error) {
-    spinner.fail('Uninstall failed')
+    s.stop('Uninstall failed')
     throw error
   }
 
   // Step 6: Print final message
   const manualSteps = getManualSteps(targets, method)
-  printFinalMessage(manualSteps, spinner)
+  printFinalMessage(manualSteps)
 
   return {
     success: true,
@@ -422,12 +415,11 @@ export async function uninstallCommand(options: {
     process.exit(0)
   }
   catch (error) {
-    const spinner = ora()
     if (error instanceof UninstallFailedError) {
-      spinner.fail(`Uninstall failed: ${error.message}`)
+      log.error(`Uninstall failed: ${error.message}`)
     }
     else {
-      spinner.fail(`Uninstall failed: ${error instanceof Error ? error.message : String(error)}`)
+      log.error(`Uninstall failed: ${error instanceof Error ? error.message : String(error)}`)
     }
     process.exit(1)
   }
