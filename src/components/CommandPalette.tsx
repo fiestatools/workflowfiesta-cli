@@ -1,11 +1,11 @@
 import type { ScrollBoxRenderable } from '@opentui/core'
-import type { Command } from '../commands'
+import type { Command } from '../slash-commands'
 import { TextAttributes } from '@opentui/core'
 import { useKeyboard } from '@opentui/react'
 
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { filterCommands, findCommand, parseCommandInput } from '../commands'
 import { useCommands } from '../hooks'
+import { filterCommands, findCommand, parseCommandInput } from '../slash-commands'
 import { BRAND_ORANGE, SUBTLE_BG, themeColors } from '../theme'
 import { commandRow, groupCommands, paletteHeight, scrollTopFor, viewportRows } from './commandPaletteLayout'
 

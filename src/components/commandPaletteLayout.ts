@@ -1,4 +1,4 @@
-import type { Command } from '../commands'
+import type { Command } from '../slash-commands'
 
 export interface CommandGroup {
   category: string
