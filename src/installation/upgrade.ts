@@ -1,8 +1,10 @@
 import type { DetectionResult, InstallationMethod } from './detection'
 import { spawn } from 'node:child_process'
+import { log } from '@clack/prompts'
+import color from 'picocolors'
 import { CLI_VERSION } from '../cli'
 import { getConfigManager } from '../config'
-import { DEFAULT_INSTALL_SCRIPT_URL, UPGRADE_COMMAND_TIMEOUT_MS } from './constants'
+import { DEFAULT_INSTALL_SCRIPT_URL, GITHUB_REPO, UPGRADE_COMMAND_TIMEOUT_MS } from './constants'
 import { detectInstallationMethod } from './detection'
 import { UpgradeFailedError } from './errors'
 import { fetchLatestVersion, normalizeVersion } from './versions'
@@ -198,9 +200,26 @@ export async function upgrade(options: UpgradeOptions = {}): Promise<UpgradeResu
   }
 }
 
-/**
- * CLI command handler for `wf upgrade`.
- */
+function printUpgradeWelcome(result: UpgradeResult): void {
+  const { fromVersion, toVersion } = result
+
+  console.log() // eslint-disable-line no-console -- CLI output
+  log.success(color.bold(`Welcome to WorkflowFiesta CLI v${toVersion}!`))
+  console.log() // eslint-disable-line no-console -- CLI output
+
+  log.message(`What's new in v${toVersion}:`, { symbol: ' ' })
+  log.message(color.cyan(`    https://github.com/${GITHUB_REPO}/releases/tag/v${toVersion}`), { symbol: ' ' })
+  console.log() // eslint-disable-line no-console -- CLI output
+
+  log.message('Report any bugs:', { symbol: ' ' })
+  log.message(color.cyan(`    https://github.com/${GITHUB_REPO}/issues`), { symbol: ' ' })
+  console.log() // eslint-disable-line no-console -- CLI output
+
+  log.message('Changelog:', { symbol: ' ' })
+  log.message(color.cyan(`    https://github.com/${GITHUB_REPO}/compare/v${fromVersion}...v${toVersion}`), { symbol: ' ' })
+  console.log() // eslint-disable-line no-console -- CLI output
+}
+
 export async function upgradeCommand(options: {
   target?: string
   forceMethod?: 'curl' | 'brew'
@@ -212,27 +231,27 @@ export async function upgradeCommand(options: {
       target,
       forceMethod,
       onProgress: (message) => {
-        console.log(message) // eslint-disable-line no-console -- CLI output
+        log.step(message)
       },
     })
 
     if (result.skipped) {
-      console.log(`\nAlready on version ${result.toVersion}`) // eslint-disable-line no-console -- CLI output
+      log.info(`Already on version ${result.toVersion}`)
     }
     else {
-      console.log('\nUpgrade complete') // eslint-disable-line no-console -- CLI output
+      printUpgradeWelcome(result)
     }
     process.exit(0)
   }
   catch (error) {
     if (error instanceof UpgradeFailedError) {
-      console.error(`\nUpgrade failed: ${error.message}`)
+      log.error(`Upgrade failed: ${error.message}`)
       if (error.stderr) {
-        console.error(error.stderr)
+        log.message(error.stderr, { symbol: ' ' })
       }
     }
     else {
-      console.error(`\nUpgrade failed: ${error instanceof Error ? error.message : String(error)}`)
+      log.error(`Upgrade failed: ${error instanceof Error ? error.message : String(error)}`)
     }
     process.exit(1)
   }

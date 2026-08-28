@@ -1,6 +1,8 @@
 import type { RunOptions } from './run'
 import type { Services } from './services'
+import { log } from '@clack/prompts'
 import { Command } from 'commander'
+import color from 'picocolors'
 import pkg from '../package.json'
 import { logger } from './logger'
 
@@ -43,11 +45,11 @@ const COMMAND_SUGGESTIONS: Record<string, string> = {
 
 function printUnknownCommandError(command: string): void {
   const suggestion = COMMAND_SUGGESTIONS[command.toLowerCase()]
-  console.error(`error: Unknown command '${command}'.`)
+  log.error(`Unknown command '${command}'.`)
   if (suggestion) {
-    console.error(`\nDid you mean: ${suggestion}`)
+    log.message(`Did you mean: ${suggestion}`, { symbol: color.cyan('?') })
   }
-  console.error(`\nRun 'wf --help' for usage information.`)
+  log.message(`Run 'wf --help' for usage information.`, { symbol: color.cyan('i') })
   process.exit(1)
 }
 
@@ -230,7 +232,7 @@ export function parseArgs(): ParsedCommand {
   program.commands.find(c => c.name() === 'upgrade')?.action((target, opts) => {
     const method = opts.method as 'curl' | 'brew' | undefined
     if (method && method !== 'curl' && method !== 'brew') {
-      console.error(`Invalid method: ${method}. Must be 'curl' or 'brew'.`)
+      log.error(`Invalid method: ${method}. Must be 'curl' or 'brew'.`)
       process.exit(1)
     }
     result = { type: 'upgrade', target: target || undefined, method }
@@ -275,7 +277,7 @@ export function parseArgs(): ParsedCommand {
       process.exit(0)
     }
     if (error.message) {
-      console.error(error.message)
+      log.error(error.message)
     }
     process.exit(1)
   }
@@ -283,7 +285,7 @@ export function parseArgs(): ParsedCommand {
   if (result.type === 'chat') {
     const globalOpts = program.opts<{ continue?: boolean, session?: string, title?: string }>()
     if (globalOpts.continue && globalOpts.session) {
-      console.error('error: --continue and --session are mutually exclusive')
+      log.error('--continue and --session are mutually exclusive')
       process.exit(1)
     }
     result = {
@@ -308,14 +310,14 @@ export async function executeCommand(command: ParsedCommand, services: Services)
           await services.auth.signIn(command.token, command.apiUrl, command.name, command.skipValidation)
         }
         else {
-          console.log('Opening browser to sign in to WorkflowFiesta...')
+          log.info('Opening browser to sign in to WorkflowFiesta...')
           await services.auth.signInWithBrowser(command.apiUrl, command.name)
         }
         if (command.name) {
-          console.log(`✓ Successfully signed in as "${command.name}"!`)
+          log.success(`Successfully signed in as "${command.name}"!`)
         }
         else {
-          console.log('✓ Successfully signed in!')
+          log.success('Successfully signed in!')
         }
         return false
       }
@@ -326,7 +328,7 @@ export async function executeCommand(command: ParsedCommand, services: Services)
           hasApiUrlOverride: !!command.apiUrl,
           accountName: command.name,
         })
-        console.error('✗ Failed to sign in:', error instanceof Error ? error.message : error)
+        log.error(`Failed to sign in: ${error instanceof Error ? error.message : error}`)
         process.exit(1)
         return true
       }
@@ -334,7 +336,7 @@ export async function executeCommand(command: ParsedCommand, services: Services)
 
     case 'auth:logout': {
       await services.auth.signOut()
-      console.log('✓ Successfully signed out.')
+      log.success('Successfully signed out.')
       process.exit(0)
       return true
     }
@@ -345,15 +347,15 @@ export async function executeCommand(command: ParsedCommand, services: Services)
         const fingerprint = await services.auth.getAccountFingerprint()
         const accountName = await services.auth.getActiveAccountName()
         if (accountName) {
-          console.log(`✓ Signed in as "${accountName}" (account: ${fingerprint})`)
+          log.success(`Signed in as "${accountName}" (account: ${fingerprint})`)
         }
         else {
-          console.log(`✓ Signed in (account: ${fingerprint})`)
+          log.success(`Signed in (account: ${fingerprint})`)
         }
       }
       else {
-        console.log('✗ Not signed in.')
-        console.log('  Run: wf auth login --token <your-token>')
+        log.warn('Not signed in.')
+        log.message('Run: wf auth login --token <your-token>', { symbol: color.cyan('i') })
       }
       process.exit(0)
       return true
@@ -364,40 +366,40 @@ export async function executeCommand(command: ParsedCommand, services: Services)
       const activeAccount = await services.auth.getActiveAccountName()
 
       if (accounts.length === 0) {
-        console.log('No accounts configured.')
-        console.log('  Run: wf auth login --token <your-token> --name <account-name>')
+        log.info('No accounts configured.')
+        log.message('Run: wf auth login --token <your-token> --name <account-name>', { symbol: color.cyan('i') })
         process.exit(0)
         return true
       }
 
-      console.log('Accounts:')
+      log.info('Accounts:')
       for (const account of accounts) {
         const isActive = account.name === activeAccount
         const marker = isActive ? '* ' : '  '
         const urlSuffix = account.apiUrlOverride ? ` (${account.apiUrlOverride})` : ''
-        console.log(`${marker}${account.name}${urlSuffix}`)
+        log.message(`${marker}${account.name}${urlSuffix}`, { symbol: ' ' })
       }
-      console.log('')
-      console.log('  * = active account')
-      console.log('  Switch: wf auth switch <name>')
+      log.message('', { symbol: ' ' })
+      log.message('* = active account', { symbol: ' ' })
+      log.message('Switch: wf auth switch <name>', { symbol: color.cyan('i') })
       process.exit(0)
       return true
     }
 
     case 'auth:switch': {
       if (!command.name) {
-        console.error('Error: account name is required')
-        console.error('Usage: wf auth switch <account-name>')
+        log.error('Account name is required')
+        log.message('Usage: wf auth switch <account-name>', { symbol: color.cyan('i') })
         process.exit(1)
       }
       const success = await services.auth.switchAccount(command.name)
       if (success) {
-        console.log(`✓ Switched to account "${command.name}"`)
+        log.success(`Switched to account "${command.name}"`)
         process.exit(0)
       }
       else {
-        console.error(`✗ Account "${command.name}" not found.`)
-        console.error('  Run: wf auth list')
+        log.error(`Account "${command.name}" not found.`)
+        log.message('Run: wf auth list', { symbol: color.cyan('i') })
         process.exit(1)
       }
       return true
@@ -405,18 +407,18 @@ export async function executeCommand(command: ParsedCommand, services: Services)
 
     case 'auth:remove': {
       if (!command.name) {
-        console.error('Error: account name is required')
-        console.error('Usage: wf auth remove <account-name>')
+        log.error('Account name is required')
+        log.message('Usage: wf auth remove <account-name>', { symbol: color.cyan('i') })
         process.exit(1)
       }
       const success = await services.auth.removeAccount(command.name)
       if (success) {
-        console.log(`✓ Removed account "${command.name}"`)
+        log.success(`Removed account "${command.name}"`)
         process.exit(0)
       }
       else {
-        console.error(`✗ Account "${command.name}" not found.`)
-        console.error('  Run: wf auth list')
+        log.error(`Account "${command.name}" not found.`)
+        log.message('Run: wf auth list', { symbol: color.cyan('i') })
         process.exit(1)
       }
       return true
@@ -425,24 +427,24 @@ export async function executeCommand(command: ParsedCommand, services: Services)
     case 'config:list': {
       const { getConfigManager } = await import('./config')
       const config = getConfigManager().getConfig()
-      console.log(JSON.stringify(config, null, 2))
+      log.info(JSON.stringify(config, null, 2))
       process.exit(0)
       return true
     }
 
     case 'config:get': {
       if (!command.key) {
-        console.error('Usage: wf config get <key>')
+        log.error('Usage: wf config get <key>')
         process.exit(1)
       }
       const { getConfigManager } = await import('./config')
       const config = getConfigManager().getConfig()
       const value = config[command.key as keyof typeof config]
       if (value !== undefined) {
-        console.log(value)
+        log.info(String(value))
       }
       else {
-        console.log('(not set)')
+        log.info('(not set)')
       }
       process.exit(0)
       return true
@@ -450,12 +452,12 @@ export async function executeCommand(command: ParsedCommand, services: Services)
 
     case 'config:set': {
       if (!command.key || command.value === undefined) {
-        console.error('Usage: wf config set <key> <value>')
+        log.error('Usage: wf config set <key> <value>')
         process.exit(1)
       }
       const { getConfigManager } = await import('./config')
       getConfigManager().setConfig({ [command.key]: command.value })
-      console.log(`✓ Set ${command.key} = ${command.value}`)
+      log.success(`Set ${command.key} = ${command.value}`)
       process.exit(0)
       return true
     }
@@ -491,20 +493,21 @@ export async function executeCommand(command: ParsedCommand, services: Services)
       await skillService.loadAll()
       const skills = skillService.all()
       if (skills.length === 0) {
-        console.log('No skills found.')
-        console.log('  Create one with: wf skill create <name>')
-        console.log('  Skills are loaded from .agents/skills/ and .claude/skills/')
+        log.info('No skills found.')
+        log.message('Create one with: wf skill create <name>', { symbol: color.cyan('i') })
+        log.message('Skills are loaded from .agents/skills/ and .claude/skills/', { symbol: color.cyan('i') })
       }
       else {
         const maxName = Math.max(...skills.map(s => s.name.length))
         const maxSource = Math.max(...skills.map(s => s.source.length))
         for (const skill of skills) {
           const ver = skill.frontmatter.version ? ` v${skill.frontmatter.version}` : ''
-          console.log(
-            `  ${skill.name.padEnd(maxName)}  ${skill.source.padEnd(maxSource)}  ${skill.description}${ver}`,
+          log.message(
+            `${skill.name.padEnd(maxName)}  ${skill.source.padEnd(maxSource)}  ${skill.description}${ver}`,
+            { symbol: ' ' },
           )
         }
-        console.log(`\n  ${skills.length} skill(s) found.`)
+        log.info(`${skills.length} skill(s) found.`)
       }
       process.exit(0)
       return true
@@ -516,24 +519,24 @@ export async function executeCommand(command: ParsedCommand, services: Services)
       await skillService.loadAll()
       const skill = skillService.get(command.name)
       if (!skill) {
-        console.error(`Skill "${command.name}" not found.`)
-        console.error('  Run: wf skill list')
+        log.error(`Skill "${command.name}" not found.`)
+        log.message('Run: wf skill list', { symbol: color.cyan('i') })
         process.exit(1)
       }
-      console.log(`Name:        ${skill.name}`)
-      console.log(`Description: ${skill.description}`)
-      console.log(`Source:      ${skill.source}`)
-      console.log(`Path:        ${skill.path}`)
+      log.info(`Name:        ${skill.name}`)
+      log.message(`Description: ${skill.description}`, { symbol: ' ' })
+      log.message(`Source:      ${skill.source}`, { symbol: ' ' })
+      log.message(`Path:        ${skill.path}`, { symbol: ' ' })
       if (skill.frontmatter.version)
-        console.log(`Version:     ${skill.frontmatter.version}`)
+        log.message(`Version:     ${skill.frontmatter.version}`, { symbol: ' ' })
       if (skill.frontmatter.author)
-        console.log(`Author:      ${skill.frontmatter.author}`)
+        log.message(`Author:      ${skill.frontmatter.author}`, { symbol: ' ' })
       if (skill.frontmatter.tags?.length)
-        console.log(`Tags:        ${skill.frontmatter.tags.join(', ')}`)
+        log.message(`Tags:        ${skill.frontmatter.tags.join(', ')}`, { symbol: ' ' })
       if (skill.frontmatter.tools?.length)
-        console.log(`Tools:       ${skill.frontmatter.tools.join(', ')}`)
-      console.log(`\n--- Content ---\n`)
-      console.log(skill.body)
+        log.message(`Tools:       ${skill.frontmatter.tools.join(', ')}`, { symbol: ' ' })
+      log.message(`\n--- Content ---\n`, { symbol: ' ' })
+      log.message(skill.body, { symbol: ' ' })
       process.exit(0)
       return true
     }
@@ -542,8 +545,8 @@ export async function executeCommand(command: ParsedCommand, services: Services)
       const { getSkillService } = await import('./skill')
       const skillService = getSkillService()
       const dir = await skillService.create(command.name, command.description)
-      console.log(`✓ Created skill "${command.name}" at ${dir}`)
-      console.log(`  Edit ${dir}/SKILL.md to add instructions.`)
+      log.success(`Created skill "${command.name}" at ${dir}`)
+      log.message(`Edit ${dir}/SKILL.md to add instructions.`, { symbol: color.cyan('i') })
       process.exit(0)
       return true
     }
@@ -555,12 +558,12 @@ export async function executeCommand(command: ParsedCommand, services: Services)
       const absPath = resolve(command.path)
       const result = await skillService.validate(absPath)
       if (result.valid) {
-        console.log(`✓ ${absPath} is valid.`)
+        log.success(`${absPath} is valid.`)
       }
       else {
-        console.error(`✗ ${absPath} has errors:`)
+        log.error(`${absPath} has errors:`)
         for (const err of result.errors) {
-          console.error(`  - ${err}`)
+          log.message(`- ${err}`, { symbol: ' ' })
         }
         process.exit(1)
       }
@@ -577,19 +580,19 @@ export async function executeCommand(command: ParsedCommand, services: Services)
       const result = await cloud.sync(localSkills)
 
       if (result.uploaded.length > 0) {
-        console.log(`↑ Uploaded ${result.uploaded.length} skill(s):`)
+        log.step(`Uploaded ${result.uploaded.length} skill(s):`)
         for (const name of result.uploaded) {
-          console.log(`    ${name}`)
+          log.message(`  ${name}`, { symbol: color.green('^') })
         }
       }
       if (result.downloaded.length > 0) {
-        console.log(`↓ Downloaded ${result.downloaded.length} skill(s):`)
+        log.step(`Downloaded ${result.downloaded.length} skill(s):`)
         for (const name of result.downloaded) {
-          console.log(`    ${name}`)
+          log.message(`  ${name}`, { symbol: color.blue('v') })
         }
       }
       if (result.uploaded.length === 0 && result.downloaded.length === 0) {
-        console.log('✓ Skills are in sync. No changes needed.')
+        log.success('Skills are in sync. No changes needed.')
       }
       process.exit(0)
       return true

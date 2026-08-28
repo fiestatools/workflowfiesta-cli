@@ -1,6 +1,6 @@
-/* eslint-disable no-console -- CLI output */
 import type { RunEvent } from '../runs/runEvents'
-import { error, orange, success, warning } from '../theme'
+import { log } from '@clack/prompts'
+import color from 'picocolors'
 
 export function isTTY(): boolean {
   return process.stdout.isTTY === true
@@ -8,9 +8,7 @@ export function isTTY(): boolean {
 
 export function printHeader(agentName: string): void {
   if (isTTY()) {
-    console.log()
-    console.log(orange(`> ${agentName}`))
-    console.log()
+    log.message(`> ${agentName}`, { symbol: color.magenta('>') })
   }
 }
 
@@ -20,8 +18,7 @@ export function printText(text: string): void {
   }
 
   if (isTTY()) {
-    console.log(text.trim())
-    console.log()
+    log.message(text.trim(), { symbol: ' ' })
   }
   else {
     process.stdout.write(text)
@@ -38,10 +35,10 @@ export function printToolEvent(event: RunEvent): void {
     case 'tool_call': {
       const toolName = stringField(content, 'name') ?? 'unknown'
       if (isTTY()) {
-        console.log(warning(`> Tool: ${toolName}`))
+        log.warn(`Tool: ${toolName}`)
       }
       else {
-        console.log(`[Tool] ${toolName}`)
+        process.stdout.write(`[Tool] ${toolName}\n`)
       }
       break
     }
@@ -50,10 +47,10 @@ export function printToolEvent(event: RunEvent): void {
       const err = stringField(content, 'error')
       if (err) {
         if (isTTY()) {
-          console.log(error(`Tool error: ${err}`))
+          log.error(`Tool error: ${err}`)
         }
         else {
-          console.log(`[Tool Error] ${err}`)
+          process.stdout.write(`[Tool Error] ${err}\n`)
         }
       }
       break
@@ -62,10 +59,10 @@ export function printToolEvent(event: RunEvent): void {
     case 'skill_invoked': {
       const skillName = stringField(content, 'name') ?? 'unknown'
       if (isTTY()) {
-        console.log(success(`> Skill: ${skillName}`))
+        log.success(`Skill: ${skillName}`)
       }
       else {
-        console.log(`[Skill] ${skillName}`)
+        process.stdout.write(`[Skill] ${skillName}\n`)
       }
       break
     }
@@ -73,10 +70,10 @@ export function printToolEvent(event: RunEvent): void {
     case 'sub_agent_spawned': {
       const agentName = stringField(content, 'name') ?? 'unknown'
       if (isTTY()) {
-        console.log(orange(`> Sub-agent: ${agentName}`))
+        log.message(`Sub-agent: ${agentName}`, { symbol: color.magenta('>') })
       }
       else {
-        console.log(`[Sub-agent] ${agentName}`)
+        process.stdout.write(`[Sub-agent] ${agentName}\n`)
       }
       break
     }
@@ -89,19 +86,19 @@ export function printToolEvent(event: RunEvent): void {
 
 export function printError(message: string): void {
   if (isTTY()) {
-    console.error(error(`Error: ${message}`))
+    log.error(`Error: ${message}`)
   }
   else {
-    console.error(`Error: ${message}`)
+    process.stderr.write(`Error: ${message}\n`)
   }
 }
 
 export function printWarning(message: string): void {
   if (isTTY()) {
-    console.error(warning(`! ${message}`))
+    log.warn(message)
   }
   else {
-    console.error(`Warning: ${message}`)
+    process.stderr.write(`Warning: ${message}\n`)
   }
 }
 
