@@ -31,6 +31,7 @@ export type { RunOptions } from './run'
 // Skill commands
 export {
   skillCreate,
+  skillInstall,
   skillList,
   skillShow,
   skillSync,
@@ -38,6 +39,7 @@ export {
 } from './skill'
 export type {
   SkillCreateOptions,
+  SkillInstallOptions,
   SkillShowOptions,
   SkillValidateOptions,
 } from './skill'

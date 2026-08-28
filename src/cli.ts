@@ -16,6 +16,7 @@ import {
   configSet,
   run,
   skillCreate,
+  skillInstall,
   skillList,
   skillShow,
   skillSync,
@@ -45,6 +46,7 @@ export type ParsedCommand
     | { type: 'skill:create', name: string, description: string }
     | { type: 'skill:validate', path: string }
     | { type: 'skill:sync' }
+    | { type: 'skill:install', source: string, skills?: string[], global?: boolean, list?: boolean, ref?: string, force?: boolean }
 
 const COMMAND_SUGGESTIONS: Record<string, string> = {
   'login': 'wf auth login [--token <your-token>]',
@@ -181,6 +183,15 @@ export function createProgram(): Command {
     .command('sync')
     .description('Sync local skills with the cloud (push local, pull remote)')
 
+  skill
+    .command('install <source>')
+    .description('Install skills from a GitHub repository or local path')
+    .option('-s, --skill <name...>', 'Install only specific skill(s) by name')
+    .option('-g, --global', 'Install to ~/.agents/skills/ instead of project')
+    .option('-l, --list', 'List available skills without installing')
+    .option('-r, --ref <ref>', 'Git branch, tag, or commit')
+    .option('-f, --force', 'Overwrite existing skills')
+
   return program
 }
 
@@ -280,6 +291,17 @@ export function parseArgs(): ParsedCommand {
   })
   skillCmd?.commands.find(c => c.name() === 'sync')?.action(() => {
     result = { type: 'skill:sync' }
+  })
+  skillCmd?.commands.find(c => c.name() === 'install')?.action((source, opts) => {
+    result = {
+      type: 'skill:install',
+      source,
+      skills: opts.skill,
+      global: opts.global,
+      list: opts.list,
+      ref: opts.ref,
+      force: opts.force,
+    }
   })
 
   program.showHelpAfterError(false)
@@ -397,6 +419,17 @@ export async function executeCommand(command: ParsedCommand, services: Services)
 
     case 'skill:sync':
       await skillSync(services)
+      return true
+
+    case 'skill:install':
+      await skillInstall({
+        source: command.source,
+        skills: command.skills,
+        global: command.global,
+        list: command.list,
+        ref: command.ref,
+        force: command.force,
+      })
       return true
 
     case 'chat':
