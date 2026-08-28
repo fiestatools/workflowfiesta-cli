@@ -2,7 +2,7 @@ import type { Services } from '../services'
 import { resolve } from 'node:path'
 import { log } from '@clack/prompts'
 import color from 'picocolors'
-import { getSkillService, SkillCloudClient } from '../skill'
+import { getSkillService, GitCloneError, installSkills, SkillCloudClient, toSkillSlug } from '../skill'
 
 export interface SkillShowOptions {
   name: string
@@ -115,4 +115,77 @@ export async function skillSync(services: Services): Promise<void> {
     log.success('Skills are in sync. No changes needed.')
   }
   process.exit(0)
+}
+
+export interface SkillInstallOptions {
+  source: string
+  skills?: string[]
+  global?: boolean
+  list?: boolean
+  ref?: string
+  force?: boolean
+}
+
+export async function skillInstall(options: SkillInstallOptions): Promise<void> {
+  try {
+    log.step(`Installing skills from ${color.cyan(options.source)}...`)
+
+    const result = await installSkills(options.source, {
+      skills: options.skills,
+      global: options.global,
+      list: options.list,
+      ref: options.ref,
+      force: options.force,
+    })
+
+    // List mode
+    if (options.list) {
+      if (result.installed.length === 0) {
+        log.info('No skills found.')
+      }
+      else {
+        log.step(`Found ${result.installed.length} skill(s):`)
+        for (const name of result.installed) {
+          log.message(`  ${color.cyan(name)}`, { symbol: ' ' })
+        }
+      }
+      process.exit(0)
+    }
+
+    const targetDir = options.global ? '~/.agents/skills/' : '.agents/skills/'
+
+    for (const name of result.installed) {
+      log.message(`${color.green('✓')} ${name} → ${targetDir}${toSkillSlug(name)}/`, { symbol: ' ' })
+    }
+
+    for (const { name, reason } of result.skipped) {
+      log.message(`${color.yellow('⚠')} ${name} - ${reason}`, { symbol: ' ' })
+    }
+
+    for (const { name, error } of result.failed) {
+      log.message(`${color.red('✗')} ${name} - ${error}`, { symbol: ' ' })
+    }
+
+    if (result.installed.length > 0) {
+      log.success(`Installed ${result.installed.length} skill(s)`)
+    }
+    if (result.skipped.length > 0) {
+      log.warn(`Skipped ${result.skipped.length} skill(s)`)
+    }
+    if (result.failed.length > 0) {
+      log.error(`Failed ${result.failed.length} skill(s)`)
+      process.exit(1)
+    }
+
+    process.exit(0)
+  }
+  catch (err) {
+    if (err instanceof GitCloneError) {
+      log.error(err.message)
+    }
+    else {
+      log.error(err instanceof Error ? err.message : String(err))
+    }
+    process.exit(1)
+  }
 }

@@ -38,6 +38,16 @@ export interface SkillLoadError {
 export type { CloudSkillMeta, PublishOpts, RemoteSkill, SyncResult, SyncSkillsResponse } from './cloud'
 export { SkillCloudClient } from './cloud'
 export { discoverSkillPaths, type DiscoveryLocation } from './discovery'
+export {
+  type DiscoveredSkill,
+  GitCloneError,
+  type InstallOptions,
+  type InstallResult,
+  installSkills,
+  type ParsedSource,
+  parseSource,
+  toSkillSlug,
+} from './install'
 export { loadSkill, parseFrontmatter } from './loader'
 export { getSkillRegistry, resetSkillRegistry, SkillRegistry } from './registry'
 export { getSkillService, resetSkillService, SkillService } from './service'
