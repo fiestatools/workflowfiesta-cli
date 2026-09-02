@@ -1,5 +1,11 @@
 # @workflowfiesta/cli
 
+## 0.22.1
+
+### Patch Changes
+
+- [#110](https://github.com/fiestatools/workflowfiesta-cli/pull/110) [`d5b1595`](https://github.com/fiestatools/workflowfiesta-cli/commit/d5b159558a2f94d2c1588a2082f85d182213150f) Thanks [@awaitimport](https://github.com/awaitimport)! - Add environment flag to auth login command
+
 ## 0.22.0
 
 ### Minor Changes
