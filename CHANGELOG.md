@@ -1,5 +1,11 @@
 # @workflowfiesta/cli
 
+## 0.22.2
+
+### Patch Changes
+
+- [#112](https://github.com/fiestatools/workflowfiesta-cli/pull/112) [`147a110`](https://github.com/fiestatools/workflowfiesta-cli/commit/147a110e2d03e5749039b8d77f9fb6876f35cf9a) Thanks [@awaitimport](https://github.com/awaitimport)! - Remove the `--environment` / `--env` flag from `auth login`. Use `--api-url` to target a specific instance instead.
+
 ## 0.22.1
 
 ### Patch Changes
