@@ -30,7 +30,7 @@ export const CLI_VERSION = pkg.version
 export type ParsedCommand
   = | { type: 'chat', continue?: boolean, session?: string, title?: string }
     | { type: 'run', message: string[], options: RunOptions }
-    | { type: 'auth:login', token?: string, apiUrl?: string, env?: string, name?: string, skipValidation?: boolean }
+    | { type: 'auth:login', token?: string, apiUrl?: string, name?: string, skipValidation?: boolean }
     | { type: 'auth:logout' }
     | { type: 'auth:status' }
     | { type: 'auth:list' }
@@ -104,8 +104,6 @@ export function createProgram(): Command {
     .description('Sign in through your browser or with an access token')
     .option('-t, --token <token>', 'Access token from WorkflowFiesta web app')
     .option('-u, --api-url <url>', 'API URL for self-hosted instances')
-    .option('-e, --environment <environment>', 'Target environment: staging | production')
-    .option('--env <environment>', 'Alias for --environment')
     .option('-n, --name <name>', 'Account name (e.g., "prod", "staging", "local")')
     .option('--skip-validation', 'Skip token validation (for testing only)')
 
@@ -229,7 +227,6 @@ export function parseArgs(): ParsedCommand {
       type: 'auth:login',
       token: opts.token,
       apiUrl: opts.apiUrl,
-      env: opts.environment ?? opts.env,
       name: opts.name,
       skipValidation: opts.skipValidation,
     }
@@ -351,7 +348,6 @@ export async function executeCommand(command: ParsedCommand, services: Services)
       await authLogin({
         token: command.token,
         apiUrl: command.apiUrl,
-        env: command.env,
         name: command.name,
         skipValidation: command.skipValidation,
       }, services)
