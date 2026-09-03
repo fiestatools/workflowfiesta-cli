@@ -6,14 +6,8 @@ import { logger } from '../logger'
 export interface AuthLoginOptions {
   token?: string
   apiUrl?: string
-  env?: string
   name?: string
   skipValidation?: boolean
-}
-
-const ENVIRONMENT_URLS: Record<string, string> = {
-  staging: 'https://staging.api.workflowfiesta.com',
-  production: 'https://api.workflowfiesta.com',
 }
 
 export interface AuthSwitchOptions {
@@ -26,29 +20,12 @@ export interface AuthRemoveOptions {
 
 export async function authLogin(options: AuthLoginOptions, services: Services): Promise<void> {
   try {
-    // Resolve the effective API URL. --api-url always takes precedence over --env.
-    let apiUrl = options.apiUrl
-    if (options.env) {
-      const env = options.env.trim().toLowerCase()
-      const envUrl = ENVIRONMENT_URLS[env]
-      if (!envUrl) {
-        log.error(`Invalid environment "${options.env}". Valid values: ${Object.keys(ENVIRONMENT_URLS).join(', ')}`)
-        process.exit(1)
-      }
-      if (options.apiUrl) {
-        log.warn('Both --api-url and --env provided; using --api-url and ignoring --env.')
-      }
-      else {
-        apiUrl = envUrl
-      }
-    }
-
     if (options.token) {
-      await services.auth.signIn(options.token, apiUrl, options.name, options.skipValidation)
+      await services.auth.signIn(options.token, options.apiUrl, options.name, options.skipValidation)
     }
     else {
       log.info('Opening browser to sign in to WorkflowFiesta...')
-      await services.auth.signInWithBrowser(apiUrl, options.name)
+      await services.auth.signInWithBrowser(options.apiUrl, options.name)
     }
     if (options.name) {
       log.success(`Successfully signed in as "${options.name}"!`)
