@@ -1,7 +1,13 @@
 import type { QueryParams, RequestOptions, TokenProvider } from './types'
+import { randomUUID } from 'node:crypto'
 import { CLI_VERSION } from '../cli'
 import { logger } from '../logger'
 import { ApiError, NetworkError, UnauthorizedError } from './errors'
+
+const CLIENT_NAME = 'cli'
+const HEADER_CLIENT = 'x-wf-client'
+const HEADER_CLIENT_VERSION = 'x-wf-client-version'
+const HEADER_TRACE_ID = 'x-trace-id'
 
 /** Construction dependencies for {@link ApiClient}. */
 export interface ApiClientOptions {
@@ -73,6 +79,9 @@ export class ApiClient {
     const headers: Record<string, string> = {
       'Accept': 'application/json',
       'User-Agent': `Workflowfiesta-CLI/${CLI_VERSION}`,
+      [HEADER_CLIENT]: CLIENT_NAME,
+      [HEADER_CLIENT_VERSION]: CLI_VERSION,
+      [HEADER_TRACE_ID]: randomUUID(),
     }
     if (authToken) {
       headers.Authorization = `Bearer ${authToken}`
