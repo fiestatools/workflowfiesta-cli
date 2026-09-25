@@ -1,5 +1,11 @@
 # @workflowfiesta/cli
 
+## 0.22.3
+
+### Patch Changes
+
+- [#116](https://github.com/fiestatools/workflowfiesta-cli/pull/116) [`427e859`](https://github.com/fiestatools/workflowfiesta-cli/commit/427e859f3626d0505d06a5efee1030d009abeada) Thanks [@awaitimport](https://github.com/awaitimport)! - Send CLI client headers
+
 ## 0.22.2
 
 ### Patch Changes
