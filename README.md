@@ -144,7 +144,7 @@ Config files are stored in `~/.config/workflowfiesta/cli/`:
 | File | Purpose |
 |------|---------|
 | `config.json` | User preferences |
-| `credentials.json` | Auth token and API URL |
+| `credentials.json` | Auth token and API URL, shared with the VS Code extension (Linux/Windows; macOS uses the Keychain item `WorkflowFiesta-credentials`) |
 | `conversations.json` | Local conversation index |
 
 ## Development
