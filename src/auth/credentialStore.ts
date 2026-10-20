@@ -1,7 +1,8 @@
-import { existsSync, mkdirSync, readFileSync, unlinkSync, writeFileSync } from 'node:fs'
+import { existsSync, mkdirSync, readFileSync, renameSync, rmSync, writeFileSync } from 'node:fs'
 import { homedir } from 'node:os'
 import { join } from 'node:path'
 import { logger } from '../logger'
+import { keychainDelete, KeychainError, keychainRead, keychainWrite } from '../utils/keychain'
 
 export interface StoredAccount {
   name: string
@@ -17,18 +18,35 @@ interface StoredCredentials {
   activeAccount?: string
 }
 
+export const KEYCHAIN_SERVICE = 'WorkflowFiesta-credentials'
+
 /**
- * File-based credential storage for the CLI.
+ * Credential storage shared with the VS Code extension.
  *
- * Stores credentials in `~/.config/workflowfiesta/cli/credentials.json`.
- * File permissions are set to 0600 (owner read/write only).
+ * - macOS: one Keychain item (`WorkflowFiesta-credentials`) holding the JSON.
+ *   After each write, `credentials.changed` is touched in the config dir so
+ *   the extension can watch for changes. An existing `credentials.json` is
+ *   moved into the Keychain on first read.
+ * - Other platforms: `~/.config/workflowfiesta/cli/credentials.json`, mode 0600.
+ *
+ * The storage, format and active-account rules MUST stay in sync with
+ * vscode extension.
  */
 export class CredentialStore {
   private readonly credentialsPath: string
+  private readonly changedPath: string
 
-  constructor(configDir?: string) {
+  /**
+   * @param configDir - Directory for the credentials file (default `~/.config/workflowfiesta/cli`)
+   * @param keychainService - Keychain service to use, or `null` for the file. Defaults to the Keychain on macOS.
+   */
+  constructor(
+    configDir?: string,
+    private readonly keychainService: string | null = process.platform === 'darwin' ? KEYCHAIN_SERVICE : null,
+  ) {
     const baseDir = configDir ?? join(homedir(), '.config', 'workflowfiesta', 'cli')
     this.credentialsPath = join(baseDir, 'credentials.json')
+    this.changedPath = join(baseDir, 'credentials.changed')
 
     // Ensure the config directory exists
     if (!existsSync(baseDir)) {
@@ -37,6 +55,9 @@ export class CredentialStore {
   }
 
   isFirstRun(): boolean {
+    if (this.keychainService && keychainRead(this.keychainService) !== undefined) {
+      return false
+    }
     return !existsSync(this.credentialsPath)
   }
 
@@ -76,6 +97,7 @@ export class CredentialStore {
     }
     else {
       delete credentials.token
+      delete credentials.apiUrlOverride
     }
     this.writeCredentials(credentials)
   }
@@ -121,9 +143,11 @@ export class CredentialStore {
   }
 
   async clearAll(): Promise<void> {
-    if (existsSync(this.credentialsPath)) {
-      unlinkSync(this.credentialsPath)
+    if (this.keychainService) {
+      keychainDelete(this.keychainService)
+      this.touchChanged()
     }
+    rmSync(this.credentialsPath, { force: true })
   }
 
   async getAccounts(): Promise<StoredAccount[]> {
@@ -240,20 +264,46 @@ export class CredentialStore {
   }
 
   private readCredentials(): StoredCredentials {
-    if (!existsSync(this.credentialsPath)) {
-      return {}
-    }
     try {
-      const content = readFileSync(this.credentialsPath, 'utf-8')
-      return JSON.parse(content) as StoredCredentials
+      return JSON.parse(this.readRaw() ?? '{}') as StoredCredentials
     }
-    catch {
+    catch (err) {
+      // A Keychain failure (e.g. access denied) must surface: returning {}
+      // here would let the next write wipe every stored account.
+      if (err instanceof KeychainError) {
+        throw err
+      }
       return {}
     }
   }
 
+  private readRaw(): string | undefined {
+    if (!this.keychainService) {
+      return existsSync(this.credentialsPath) ? readFileSync(this.credentialsPath, 'utf-8') : undefined
+    }
+    const stored = keychainRead(this.keychainService)
+    if (stored !== undefined || !existsSync(this.credentialsPath)) {
+      return stored
+    }
+    const fromFile = readFileSync(this.credentialsPath, 'utf-8')
+    keychainWrite(this.keychainService, fromFile)
+    rmSync(this.credentialsPath)
+    logger.debug('Moved credentials file into the macOS Keychain')
+    return fromFile
+  }
+
   private writeCredentials(credentials: StoredCredentials): void {
-    const content = JSON.stringify(credentials, null, 2)
-    writeFileSync(this.credentialsPath, content, { mode: 0o600 })
+    if (this.keychainService) {
+      keychainWrite(this.keychainService, JSON.stringify(credentials))
+      this.touchChanged()
+      return
+    }
+    const tmp = `${this.credentialsPath}.${process.pid}.tmp`
+    writeFileSync(tmp, JSON.stringify(credentials, null, 2), { mode: 0o600 })
+    renameSync(tmp, this.credentialsPath)
+  }
+
+  private touchChanged(): void {
+    writeFileSync(this.changedPath, String(Date.now()), { mode: 0o600 })
   }
 }
