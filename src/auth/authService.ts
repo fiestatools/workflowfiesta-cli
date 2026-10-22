@@ -3,6 +3,7 @@ import type { TokenProvider } from '../api/types'
 import type { CredentialStore, StoredAccount } from './credentialStore'
 import { createHash, randomBytes } from 'node:crypto'
 import { UnauthorizedError } from '../api/errors'
+import { getApiBaseUrl } from '../config/settings'
 import {
   ACCESS_TOKEN_PATTERN,
   CLI_AUTH_MAX_ATTEMPTS,
@@ -148,49 +149,29 @@ export class AuthService implements TokenProvider {
       )
     }
 
+    if (!skipValidation) {
+      await this.validateToken(token, apiUrlOverride)
+    }
+
     if (accountName) {
       await this.credentialStore.setAccount({
         name: accountName,
         token,
         apiUrlOverride,
       })
-
       await this.credentialStore.switchAccount(accountName)
-
-      if (!skipValidation) {
-        try {
-          await this.validateToken(token)
-        }
-        catch (err) {
-          await this.credentialStore.removeAccount(accountName)
-          throw err
-        }
-      }
-
-      await this.emitState()
-      return
-    }
-
-    // Legacy single-account mode
-    // Store the API URL override first (if provided) so validation uses it.
-    if (apiUrlOverride) {
-      await this.credentialStore.setApiUrlOverride(apiUrlOverride)
     }
     else {
-      await this.credentialStore.clearApiUrlOverride()
-    }
-
-    if (!skipValidation) {
-      try {
-        await this.validateToken(token)
+      // Legacy single-account mode
+      if (apiUrlOverride) {
+        await this.credentialStore.setApiUrlOverride(apiUrlOverride)
       }
-      catch (err) {
+      else {
         await this.credentialStore.clearApiUrlOverride()
-        throw err
       }
+      await this.credentialStore.setToken(token)
     }
 
-    await this.credentialStore.setToken(token)
     await this.emitState()
   }
 
@@ -243,7 +224,6 @@ export class AuthService implements TokenProvider {
   async signOut(): Promise<void> {
     logger.debug('signOut')
     await this.credentialStore.clearToken()
-    await this.credentialStore.clearApiUrlOverride()
     await this.emitState()
   }
 
@@ -298,11 +278,12 @@ export class AuthService implements TokenProvider {
    * Probe the validation endpoint with an explicit token. Throws on any
    * failure — a 200 is required to consider the token valid.
    */
-  private async validateToken(token: string): Promise<void> {
+  private async validateToken(token: string, apiUrlOverride?: string): Promise<void> {
     if (!this.api) {
       throw new Error('AuthService.useApiClient() must be called before signing in.')
     }
-    await this.api.get(VALIDATION_ENDPOINT, { token })
+    const baseUrl = apiUrlOverride?.trim().replace(/\/+$/, '') || getApiBaseUrl()
+    await this.api.get(VALIDATION_ENDPOINT, { token, baseUrl })
   }
 
   /** Emit the current auth state to all listeners. */
