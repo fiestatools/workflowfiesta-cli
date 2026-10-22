@@ -1,5 +1,11 @@
 # @workflowfiesta/cli
 
+## 0.23.0
+
+### Minor Changes
+
+- [#118](https://github.com/fiestatools/workflowfiesta-cli/pull/118) [`e8f8c8d`](https://github.com/fiestatools/workflowfiesta-cli/commit/e8f8c8dd4ec1f6091a023120c910524dc185c81c) Thanks [@awaitimport](https://github.com/awaitimport)! - Share sign-in with the VS Code extension. On macOS, credentials now live in the Keychain (item `WorkflowFiesta-credentials`) and an existing `credentials.json` is moved there automatically; Linux and Windows keep using `credentials.json`, now written atomically. A failed `wf auth login` no longer changes or removes the current session, and `wf auth logout` no longer clears the next account's API URL.
+
 ## 0.22.3
 
 ### Patch Changes
